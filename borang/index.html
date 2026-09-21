@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Permohonan Bantuan - Muslim Care Malaysia</title>
+<link rel="icon" href="https://i.postimg.cc/7LryVYZ0/image.png" type="image/png">
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<style>
+  body { font-family:'Inter',sans-serif; background:#f3f4f6; }
+  .inp { width:100%; border:1px solid #d1d5db; border-radius:.5rem; padding:.55rem .8rem; outline:none; background:#fff; }
+  .inp:focus { border-color:#059669; box-shadow:0 0 0 1px #059669; }
+  .lbl { display:block; font-size:.8rem; font-weight:600; color:#374151; margin-bottom:.25rem; }
+  .sig-wrap { position:relative; width:100%; height:170px; border:2px dashed #d1d5db; border-radius:.5rem; background:#f9fafb; }
+  .sig-wrap canvas { position:absolute; inset:0; width:100%; height:100%; }
+  .mcm-spin { position:relative; width:86px; height:86px; display:grid; place-items:center; margin:0 auto; }
+  .mcm-spin::before { content:''; position:absolute; inset:0; border:3px solid #d1fae5; border-top-color:#059669; border-radius:50%; animation:spin 1s linear infinite; }
+  .mcm-spin img { width:56px; height:56px; object-fit:contain; animation:mcmpulse 1.4s ease-in-out infinite; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  @keyframes mcmpulse { 0%,100% { transform:scale(.9); opacity:.75 } 50% { transform:scale(1.06); opacity:1 } }
+  .step-bulat { width:34px; height:34px; border-radius:9999px; border:2px solid #e5e7eb; background:#fff; color:#9ca3af; display:flex; align-items:center; justify-content:center; font-weight:700; margin-bottom:6px; }
+  .step.on .step-bulat { background:#059669; border-color:#059669; color:#fff; }
+  .step.siap .step-bulat { background:#d1fae5; border-color:#d1fae5; color:#059669; }
+  .step.on span, .step.siap span { color:#059669; font-weight:600; }
+  #pdf-stage { position:fixed; left:0; top:0; z-index:-1; opacity:0; pointer-events:none; }
+  .a4 { width:794px; background:#fff; color:#000; font-family:Arial,sans-serif; font-size:12px; line-height:1.45; padding:36px 42px; }
+  .a4 table { width:100%; border-collapse:collapse; margin-bottom:10px; }
+  .a4 td, .a4 th { border:1px solid #000; padding:4px 6px; vertical-align:top; }
+  .a4 .sec { background:#e5e7eb; font-weight:bold; text-transform:uppercase; font-size:11px; padding:3px 6px; border:1px solid #000; margin-bottom:6px; }
+  .ralat { border-color:#dc2626 !important; background:#fef2f2; }
+</style>
+</head>
+<body class="text-gray-800">
+
+<header class="bg-emerald-700 text-white shadow sticky top-0 z-40">
+  <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
+    <div class="flex items-center gap-3 min-w-0">
+      <img src="https://i.postimg.cc/7LryVYZ0/image.png" class="h-10 bg-white/20 p-1 rounded" alt="">
+      <div class="min-w-0"><div class="font-bold leading-tight truncate" id="h-tajuk">Permohonan Bantuan</div><div class="text-emerald-200 text-xs truncate" id="h-sub">Muslim Care Malaysia Society</div></div>
+    </div>
+    <div class="flex gap-2">
+      <a href="../" class="bg-emerald-800 hover:bg-emerald-900 text-xs font-semibold px-3 py-2 rounded"><i class="fa-solid fa-house mr-1"></i><span class="hidden sm:inline"> Utama</span></a>
+      <a href="./" class="bg-emerald-800 hover:bg-emerald-900 text-xs font-semibold px-3 py-2 rounded" id="btn-senarai"><i class="fa-solid fa-list mr-1"></i> Senarai Borang</a>
+    </div>
+  </div>
+</header>
+
+<main class="max-w-5xl mx-auto px-4 py-8">
+
+  <!-- STEPPER -->
+  <div id="stepper" class="hidden mb-8">
+    <div class="flex items-start justify-between border-b pb-4 gap-2">
+      <div class="step flex flex-col items-center flex-1" data-step="1"><div class="step-bulat">1</div><span class="text-xs text-gray-400 text-center">Terma &amp; Syarat</span></div>
+      <div class="step flex flex-col items-center flex-1" data-step="2"><div class="step-bulat">2</div><span class="text-xs text-gray-400 text-center">Borang Permohonan</span></div>
+      <div class="step flex flex-col items-center flex-1" data-step="3"><div class="step-bulat">3</div><span class="text-xs text-gray-400 text-center">Hantar &amp; Sahkan</span></div>
+      <div class="step flex flex-col items-center flex-1" data-step="4"><div class="step-bulat">4</div><span class="text-xs text-gray-400 text-center">Selesai</span></div>
+    </div>
+  </div>
+
+  <!-- SENARAI BORANG -->
+  <section id="v-senarai" class="hidden">
+    <h1 class="text-2xl font-bold mb-1">Pilih Borang Permohonan</h1>
+    <p class="text-gray-600 mb-6 text-sm">Sila pilih program yang ingin dipohon. Setiap borang mempunyai syarat dan dokumen sokongan yang berbeza.</p>
+    <div class="grid md:grid-cols-2 gap-4" id="senarai-kad"></div>
+  </section>
+
+  <!-- SYARAT -->
+  <section id="v-syarat" class="hidden bg-white rounded-xl shadow-sm overflow-hidden">
+    <div class="bg-emerald-50 px-6 py-4 border-b border-emerald-100"><h2 class="text-xl font-bold text-emerald-800" id="s-tajuk"></h2><p class="text-sm text-gray-600" id="s-sub"></p></div>
+    <div class="p-6 space-y-5 text-sm" id="s-body"></div>
+    <div class="bg-gray-50 px-6 py-4 border-t flex flex-col sm:flex-row justify-between gap-3">
+      <label class="flex items-start gap-2 text-sm"><input type="checkbox" id="setuju-syarat" class="mt-1 w-5 h-5"> <span>Saya telah membaca dan bersetuju dengan syarat serta keperluan dokumen di atas.</span></label>
+      <button id="btn-mula" disabled class="bg-emerald-600 disabled:bg-gray-300 hover:bg-emerald-700 text-white font-semibold py-2 px-6 rounded-lg whitespace-nowrap">Teruskan ke Borang <i class="fa-solid fa-arrow-right ml-1"></i></button>
+    </div>
+  </section>
+
+  <!-- BORANG -->
+  <section id="v-borang" class="hidden space-y-6">
+    <div id="borang-seksyen" class="space-y-6"></div>
+
+    <!-- Dokumen -->
+    <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+      <div class="bg-emerald-50 px-6 py-3 border-b"><h3 class="font-bold text-emerald-800">LAMPIRAN DOKUMEN</h3></div>
+      <div class="p-6">
+        <p class="text-xs text-blue-800 bg-blue-50 border border-blue-100 rounded p-3 mb-4"><i class="fa-solid fa-circle-info mr-1"></i> Format PDF, JPG atau PNG sahaja. Maksimum 3MB setiap fail. Jika beberapa keping gambar, sila gabungkan dalam satu fail PDF.</p>
+        <div class="grid md:grid-cols-2 gap-4" id="dok-list"></div>
+      </div>
+    </div>
+
+    <!-- Pengakuan -->
+    <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+      <div class="bg-emerald-50 px-6 py-3 border-b"><h3 class="font-bold text-emerald-800">PENGAKUAN & PERSETUJUAN PERLINDUNGAN DATA PERIBADI (PDPA)</h3></div>
+      <div class="p-6 space-y-5">
+        <ol class="list-decimal ml-5 space-y-2 text-sm text-gray-700 text-justify" id="pdpa-list"></ol>
+        <label class="flex items-start gap-2 text-sm font-medium"><input type="checkbox" id="setuju-pdpa" class="mt-1 w-5 h-5"> <span>Saya mengesahkan dan bersetuju dengan kesemua perkara di atas.</span></label>
+        <div class="grid md:grid-cols-2 gap-6">
+          <div class="space-y-3">
+            <div><label class="lbl">Nama Pemohon (penandatangan)</label><input id="tt-nama" class="inp uppercase bg-gray-50" readonly></div>
+            <div><label class="lbl">Jawatan (jika mewakili organisasi)</label><input id="tt-jawatan" class="inp uppercase"></div>
+            <div><label class="lbl">Tarikh</label><input id="tt-tarikh" type="date" class="inp bg-gray-50" readonly></div>
+          </div>
+          <div>
+            <div class="flex justify-between items-end mb-1"><label class="lbl !mb-0">Tandatangan Pemohon *</label><button type="button" class="text-xs text-red-600" onclick="pad && pad.clear()"><i class="fa-solid fa-eraser"></i> Padam</button></div>
+            <div class="sig-wrap"><canvas id="sig"></canvas></div>
+            <p class="text-xs text-gray-500 mt-1">Lukis tandatangan guna tetikus atau skrin sentuh.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="flex flex-col sm:flex-row justify-between gap-3">
+      <button id="btn-balik" class="text-gray-600 font-semibold px-4 py-2"><i class="fa-solid fa-arrow-left mr-1"></i> Kembali ke Syarat</button>
+      <button id="btn-hantar" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-8 rounded-lg shadow"><i class="fa-solid fa-paper-plane mr-2"></i> Hantar Permohonan</button>
+    </div>
+  </section>
+
+  <!-- BERJAYA -->
+  <section id="v-berjaya" class="hidden bg-white rounded-xl shadow p-10 text-center max-w-lg mx-auto">
+    <div class="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-5 text-emerald-600"><i class="fa-solid fa-check text-4xl"></i></div>
+    <h2 class="text-2xl font-bold mb-2">Permohonan Berjaya Dihantar</h2>
+    <p class="text-gray-600 mb-6">E-mel pengesahan telah dihantar kepada anda. Sila simpan nombor rujukan di bawah untuk semakan status.</p>
+    <div class="bg-gray-50 border rounded-lg p-5 mb-6"><p class="text-xs text-gray-500 mb-1">NO. RUJUKAN ANDA</p><div class="text-xl font-extrabold text-emerald-700 break-all" id="ref-no">-</div></div>
+    <button id="btn-muat" class="w-full bg-amber-500 hover:bg-amber-600 text-white font-semibold py-3 rounded-lg mb-3"><i class="fa-solid fa-file-pdf mr-2"></i> Muat Turun Salinan Borang</button>
+    <a href="./" class="block w-full bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold py-3 rounded-lg">Kembali ke Senarai Borang</a>
+  </section>
+</main>
+
+<div id="overlay" class="fixed inset-0 bg-white/90 z-50 hidden flex-col items-center justify-center"><div class="mcm-spin mb-4"><img src="https://i.postimg.cc/7LryVYZ0/image.png" crossorigin="anonymous" alt=""></div><p id="overlay-text" class="text-emerald-800 font-medium text-center px-6">Memproses...</p></div>
+<div id="pdf-stage"></div>
+
+<script src="config.js"></script>
+<script>
+/* =====================================================================
+   ENJIN BORANG — baca definisi dari config.js
+   ===================================================================== */
+const API_URL = 'https://script.google.com/macros/s/AKfycbzjZRBiOeFxkc47QYwhCpaxoKg_p-NH0oCrx6AzXmBks6AIntxDeVJTBX0BqR7rbQlq7w/exec';
+const LOGO = 'https://i.postimg.cc/7LryVYZ0/image.png';
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const todayISO = () => { const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0,10); };
+const fmtDate = v => { if (!v) return ''; const d = new Date(v); return isNaN(d) ? v : `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`; };
+const STEP_PETA = { 'v-syarat': 1, 'v-borang': 2, 'v-berjaya': 4 };
+function show(id) {
+  ['v-senarai','v-syarat','v-borang','v-berjaya'].forEach(x => $(x).classList.toggle('hidden', x !== id));
+  const s = STEP_PETA[id];
+  $('stepper').classList.toggle('hidden', !s);
+  if (s) setStep(s);
+}
+function setStep(n) {
+  document.querySelectorAll('#stepper .step').forEach(el => {
+    const i = Number(el.dataset.step);
+    el.classList.toggle('on', i === n);
+    el.classList.toggle('siap', i < n);
+    el.querySelector('.step-bulat').innerHTML = i < n ? '<i class="fa-solid fa-check"></i>' : i;
+  });
+}
+const busy = (on, text) => { $('overlay-text').innerHTML = text || 'Memproses...'; $('overlay').classList.toggle('hidden', !on); $('overlay').classList.toggle('flex', !!on); };
+
+const KOD = new URLSearchParams(location.search).get('kod');
+const B = KOD ? BORANG[KOD] : null;
+let pad = null, otpSentTo = '', lastPdfHtml = '', lastRef = '';
+
+/* ------------------------- SENARAI BORANG ------------------------- */
+function renderSenarai() {
+  $('h-tajuk').textContent = 'Permohonan Bantuan';
+  $('btn-senarai').classList.add('hidden');
+  const kad213 = `
+    <a href="../kebajikan/" class="block bg-white rounded-xl shadow-sm hover:shadow-md border hover:border-emerald-400 transition p-5">
+      <div class="text-xs font-bold text-emerald-700">2.13</div>
+      <div class="font-bold text-lg mt-1">PERMOHONAN KEBAJIKAN (UNTUKMU SISWA)</div>
+      <p class="text-sm text-gray-600 mt-1">Bantuan peranti pintar &amp; pendidikan untuk pelajar</p>
+      <div class="mt-3 text-emerald-700 text-sm font-semibold">Mohon sekarang <i class="fa-solid fa-arrow-right ml-1"></i></div>
+    </a>`;
+  $('senarai-kad').innerHTML = kad213 + Object.entries(BORANG).map(([kod, b]) => `
+    <a href="?kod=${encodeURIComponent(kod)}" class="block bg-white rounded-xl shadow-sm hover:shadow-md border hover:border-emerald-400 transition p-5">
+      <div class="text-xs font-bold text-emerald-700">${esc(kod)}</div>
+      <div class="font-bold text-lg mt-1">${esc(b.nama)}</div>
+      <p class="text-sm text-gray-600 mt-1">${esc(b.subtajuk || '')}</p>
+      <div class="mt-3 text-emerald-700 text-sm font-semibold">Mohon sekarang <i class="fa-solid fa-arrow-right ml-1"></i></div>
+    </a>`).join('');
+  show('v-senarai');
+}
+
+/* ---------------------------- SYARAT ---------------------------- */
+function renderSyarat() {
+  $('h-tajuk').textContent = B.nama;
+  $('h-sub').textContent = KOD + ' · Muslim Care Malaysia Society';
+  $('s-tajuk').textContent = B.tajuk;
+  $('s-sub').textContent = B.subtajuk || '';
+  const senarai = (tajuk, arr, ikon, warna) => arr && arr.length ? `<div><h3 class="font-bold text-gray-900 border-l-4 ${warna} pl-3 mb-2">${tajuk}</h3><ul class="space-y-1.5 pl-1">${arr.map(x => `<li class="flex gap-2"><i class="fa-solid ${ikon} mt-1"></i><span>${esc(x)}</span></li>`).join('')}</ul></div>` : '';
+  const dokSemua = (B.dokumen || []).concat(...(B.skim ? B.skim.pilihan.map(p => (p.dok || []).map(d => ({ ...d, l: d.l + ' (' + p.v + ')' }))) : []));
+  $('s-body').innerHTML = `
+    <p class="text-justify text-gray-700">${esc(B.pengenalan || '')}</p>
+    ${senarai('SYARAT-SYARAT', B.syarat, 'fa-check text-emerald-600', 'border-emerald-500')}
+    ${senarai('KRITERIA KEUTAMAAN', B.keutamaan, 'fa-star text-amber-500', 'border-amber-500')}
+    ${senarai('DOKUMEN YANG PERLU DISEDIAKAN', dokSemua.map(d => d.l + (d.wajib ? ' (WAJIB)' : ' (jika berkenaan)')), 'fa-file-pdf text-red-500', 'border-red-500')}
+    <div class="bg-amber-50 border border-amber-200 rounded p-3 text-amber-900 text-xs"><b>Perhatian:</b> Hanya borang yang lengkap akan diproses. Pengesahan permohonan hendaklah dilakukan oleh Ketua Kampung / Amil Zakat Kariah / Pengerusi Masjid / Pegawai Majlis Agama Islam / ADUN / ADN / Ahli Parlimen / Guru Besar.</div>`;
+  $('setuju-syarat').addEventListener('change', e => $('btn-mula').disabled = !e.target.checked);
+  $('btn-mula').addEventListener('click', () => { show('v-borang'); window.scrollTo(0, 0); setupPad(); });
+  show('v-syarat');
+}
+
+/* ---------------------------- BORANG ---------------------------- */
+const fid = k => 'f_' + k;
+
+function medanHtml(f) {
+  const id = fid(f.k), w = f.penuh ? 'md:col-span-2' : '';
+  const wajib = f.wajib ? ' <span class="text-red-600">*</span>' : '';
+  const nota = f.nota ? `<p class="text-xs text-gray-500 mt-1">${esc(f.nota)}</p>` : '';
+  let inner = '';
+  switch (f.t) {
+    case 'pilih':
+      inner = `<select id="${id}" class="inp">${['<option value="">-- Pilih --</option>'].concat(f.pilihan.map(o => `<option>${esc(o)}</option>`)).join('')}</select>`; break;
+    case 'radio':
+      inner = `<div class="flex flex-wrap gap-3">${f.pilihan.map((o, i) => `<label class="flex items-center gap-2 border rounded px-3 py-2"><input type="radio" name="${id}" value="${esc(o)}"> ${esc(o)}</label>`).join('')}</div>`; break;
+    case 'semak':
+      inner = `<div id="${id}" class="grid sm:grid-cols-2 gap-1.5">${f.pilihan.map(o => `<label class="flex items-center gap-2 text-sm"><input type="checkbox" value="${esc(o)}" class="w-4 h-4"> ${esc(o)}</label>`).join('')}</div>`; break;
+    case 'teks':
+      inner = `<textarea id="${id}" rows="3" class="inp"></textarea>`; break;
+    case 'jadual':
+      inner = `<div class="overflow-x-auto"><table class="w-full text-xs" id="${id}"><thead><tr class="text-left text-gray-500">${f.kolum.map(c => `<th class="py-1 pr-2">${esc(c.l)}</th>`).join('')}<th></th></tr></thead><tbody></tbody></table></div>
+        <button type="button" class="mt-2 text-xs font-semibold text-blue-700" onclick="tambahBaris('${f.k}')"><i class="fa-solid fa-plus"></i> Tambah baris</button>`; break;
+    case 'nombor': case 'wang':
+      inner = `<input id="${id}" type="number" step="${f.t === 'wang' ? '0.01' : '1'}" min="0" class="inp">`; break;
+    case 'tarikh':
+      inner = `<input id="${id}" type="date" class="inp">`; break;
+    case 'emel':
+      inner = `<div class="flex gap-2"><input id="${id}" type="email" class="inp flex-1 min-w-0"><button type="button" id="btn-otp" class="shrink-0 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3 rounded-lg">Hantar Kod</button></div>
+        <div id="otp-wrap" class="hidden mt-2"><input id="f_otp" maxlength="6" inputmode="numeric" class="inp tracking-[.4em] font-bold" placeholder="Kod 6 digit dari e-mel"></div>
+        <p id="otp-msg" class="text-xs text-gray-500 mt-1">E-mel mesti aktif. Kod pengesahan akan dihantar ke e-mel ini.</p>`; break;
+    default:
+      inner = `<input id="${id}" type="${f.t === 'tel' ? 'tel' : 'text'}" class="inp ${f.t === 'upper' ? 'uppercase' : ''}" ${f.t === 'ic' ? 'maxlength="14" placeholder="Cth: 010203-10-1234"' : ''}>`;
+  }
+  return `<div class="${w}" data-medan="${f.k}">${f.t === 'jadual' ? `<label class="lbl">${esc(f.l)}${wajib}</label>` : `<label class="lbl" for="${id}">${esc(f.l)}${wajib}</label>`}${inner}${nota}</div>`;
+}
+
+function renderBorang() {
+  const kad = (tajuk, isi, nota) => `<div class="bg-white rounded-xl shadow-sm overflow-hidden"><div class="bg-emerald-50 px-6 py-3 border-b"><h3 class="font-bold text-emerald-800">${esc(tajuk.toUpperCase())}</h3>${nota ? `<p class="text-xs text-gray-600 mt-1">${esc(nota)}</p>` : ''}</div><div class="p-6 grid md:grid-cols-2 gap-4">${isi}</div></div>`;
+  let html = '';
+  if (B.skim) {
+    html += kad('Jenis Bantuan', `<div class="md:col-span-2"><label class="lbl">${esc(B.skim.l)} <span class="text-red-600">*</span></label>
+      <div class="grid md:grid-cols-3 gap-3">${B.skim.pilihan.map((p, i) => `<label class="border-2 rounded-lg p-3 cursor-pointer flex items-start gap-2 has-[:checked]:border-emerald-600 has-[:checked]:bg-emerald-50"><input type="radio" name="f_skim" value="${esc(p.v)}" class="mt-1" onchange="renderDokumen()"> <span class="text-sm font-semibold">${esc(p.v)}</span></label>`).join('')}</div></div>`);
+  }
+  B.seksyen.forEach(s => { html += kad(s.tajuk, s.medan.map(medanHtml).join(''), s.nota); });
+  $('borang-seksyen').innerHTML = html;
+
+  // jadual: baris permulaan
+  B.seksyen.forEach(s => s.medan.forEach(f => {
+    if (f.t !== 'jadual') return;
+    (f.asal && f.asal.length ? f.asal : [{}, {}]).forEach(v => tambahBaris(f.k, v));
+  }));
+  // medan bersyarat
+  document.querySelectorAll('.inp, input[type=radio], input[type=checkbox]').forEach(el => el.addEventListener('change', kemasSyarat));
+  kemasSyarat();
+  renderDokumen();
+  $('pdpa-list').innerHTML = PDPA.map(x => `<li>${esc(x)}</li>`).join('');
+  $('tt-tarikh').value = todayISO();
+  const namaEl = $(fid(B.peta.nama));
+  if (namaEl) namaEl.addEventListener('input', () => $('tt-nama').value = namaEl.value.toUpperCase());
+  const emelEl = $(fid(B.peta.emel));
+  if (emelEl) emelEl.addEventListener('input', () => { if (otpSentTo && emelEl.value.trim().toLowerCase() !== otpSentTo) resetOtp(); });
+  document.querySelectorAll('input[id^="f_"]').forEach(el => {
+    const f = semuaMedan().find(x => fid(x.k) === el.id);
+    if (f && f.t === 'ic') el.addEventListener('input', () => {
+      let v = el.value.replace(/\D/g, '').slice(0, 12);
+      if (v.length > 8) v = v.slice(0,6) + '-' + v.slice(6,8) + '-' + v.slice(8); else if (v.length > 6) v = v.slice(0,6) + '-' + v.slice(6);
+      el.value = v;
+    });
+  });
+  if ($('btn-otp')) $('btn-otp').addEventListener('click', mintaOtp);
+}
+
+const semuaMedan = () => B.seksyen.reduce((a, s) => a.concat(s.medan), []);
+
+function tambahBaris(k, nilai) {
+  const f = semuaMedan().find(x => x.k === k);
+  const tbody = $(fid(k)).querySelector('tbody');
+  const tr = document.createElement('tr');
+  tr.innerHTML = f.kolum.map(c => `<td class="pr-2 py-1">${c.t === 'pilih'
+    ? `<select class="inp !py-1 text-xs" data-k="${c.k}"><option value=""></option>${c.pilihan.map(o => `<option>${esc(o)}</option>`).join('')}</select>`
+    : `<input class="inp !py-1 text-xs ${c.t === 'upper' ? 'uppercase' : ''}" data-k="${c.k}" type="${c.t === 'wang' || c.t === 'nombor' ? 'number' : 'text'}" ${c.t === 'wang' ? 'step="0.01"' : ''} value="${esc((nilai || {})[c.k] || '')}">`}</td>`).join('')
+    + `<td><button type="button" class="text-red-500 px-1" onclick="this.closest('tr').remove()"><i class="fa-solid fa-trash"></i></button></td>`;
+  tbody.appendChild(tr);
+}
+
+function kemasSyarat() {
+  semuaMedan().forEach(f => {
+    if (!f.jika) return;
+    const el = document.querySelector(`[data-medan="${f.k}"]`);
+    if (!el) return;
+    const v = nilaiMedan(semuaMedan().find(x => x.k === f.jika.k));
+    el.classList.toggle('hidden', !f.jika.v.includes(String(v).toUpperCase()));
+  });
+}
+
+function renderDokumen() {
+  const skim = document.querySelector('input[name="f_skim"]:checked');
+  const extra = skim && B.skim ? (B.skim.pilihan.find(p => p.v === skim.value) || {}).dok || [] : [];
+  const semua = (B.dokumen || []).concat(extra);
+  $('dok-list').innerHTML = semua.map(d => `
+    <div class="border rounded-lg p-3" data-dok="${esc(d.k)}">
+      <label class="lbl">${esc(d.l)} ${d.wajib ? '<span class="text-red-600">*</span>' : '<span class="text-gray-400 text-xs">(jika berkenaan)</span>'}</label>
+      <input type="file" accept=".pdf,image/png,image/jpeg" class="text-sm w-full" data-label="${esc(d.l)}" ${d.wajib ? 'data-wajib="1"' : ''}>
+    </div>`).join('');
+}
+
+/* ----------------------------- OTP ----------------------------- */
+function resetOtp() {
+  otpSentTo = ''; $('otp-wrap').classList.add('hidden'); if ($('f_otp')) $('f_otp').value = '';
+  $('otp-msg').className = 'text-xs text-amber-700 mt-1'; $('otp-msg').textContent = 'E-mel ditukar. Sila minta kod baru.';
+  $('btn-otp').disabled = false; $('btn-otp').textContent = 'Hantar Kod';
+}
+async function mintaOtp() {
+  const el = $(fid(B.peta.emel)), btn = $('btn-otp'), msg = $('otp-msg');
+  const email = el.value.trim().toLowerCase();
+  if (!el.checkValidity() || !email) { el.reportValidity(); return; }
+  btn.disabled = true; btn.textContent = 'Menghantar...';
+  try {
+    const r = await api('requestOtp', { email });
+    otpSentTo = email;
+    $('otp-wrap').classList.remove('hidden');
+    msg.className = 'text-xs text-emerald-700 mt-1 font-medium';
+    msg.textContent = 'Kod telah dihantar ke ' + email + '. Semak Inbox/Spam. Kod sah 10 minit.';
+    let t = 60; const iv = setInterval(() => { btn.textContent = `Hantar semula (${t})`; if (--t < 0) { clearInterval(iv); btn.disabled = false; btn.textContent = 'Hantar Semula'; } }, 1000);
+  } catch (err) {
+    msg.className = 'text-xs text-red-600 mt-1 font-medium'; msg.textContent = err.message;
+    btn.disabled = false; btn.textContent = 'Hantar Kod';
+  }
+}
+
+/* --------------------------- NILAI --------------------------- */
+function nilaiMedan(f) {
+  if (!f) return '';
+  const el = $(fid(f.k));
+  if (f.t === 'radio') { const r = document.querySelector(`input[name="${fid(f.k)}"]:checked`); return r ? r.value : ''; }
+  if (f.t === 'semak') return [...el.querySelectorAll('input:checked')].map(x => x.value).join(', ');
+  if (f.t === 'jadual') {
+    return [...el.querySelectorAll('tbody tr')].map(tr => {
+      const o = {}; tr.querySelectorAll('[data-k]').forEach(i => o[i.dataset.k] = i.value.trim());
+      return o;
+    }).filter(o => Object.values(o).some(v => v !== ''));
+  }
+  if (!el) return '';
+  const v = el.value.trim();
+  return (f.t === 'upper' || f.t === 'ic') ? v.toUpperCase() : v;
+}
+const nilaiIkutKunci = k => nilaiMedan(semuaMedan().find(x => x.k === k));
+const jadualTeks = (f, rows) => rows.map((r, i) => (i + 1) + '. ' + f.kolum.map(c => `${c.l}: ${r[c.k] || '-'}`).join(' | ')).join('\n');
+
+function kutipData() {
+  const butiran = [];
+  const skim = document.querySelector('input[name="f_skim"]:checked');
+  if (B.skim) butiran.push({ l: B.skim.l, v: skim ? skim.value : '' });
+  B.seksyen.forEach(s => s.medan.forEach(f => {
+    const el = document.querySelector(`[data-medan="${f.k}"]`);
+    if (el && el.classList.contains('hidden')) return;
+    const v = nilaiMedan(f);
+    if (f.t === 'jadual') { if (v.length) butiran.push({ l: f.l, v: jadualTeks(f, v) }); }
+    else if (v !== '') butiran.push({ l: f.l, v });
+  }));
+  return butiran;
+}
+
+/* -------------------------- VALIDASI -------------------------- */
+function semak() {
+  const ralat = [];
+  document.querySelectorAll('.ralat').forEach(e => e.classList.remove('ralat'));
+  if (B.skim && !document.querySelector('input[name="f_skim"]:checked')) ralat.push('Sila pilih ' + B.skim.l);
+  B.seksyen.forEach(s => s.medan.forEach(f => {
+    if (!f.wajib) return;
+    const wrap = document.querySelector(`[data-medan="${f.k}"]`);
+    if (wrap && wrap.classList.contains('hidden')) return;
+    const v = nilaiMedan(f);
+    const kosong = f.t === 'jadual' ? !v.length : !v;
+    if (kosong) { ralat.push(f.l); const el = $(fid(f.k)); if (el && el.classList) el.classList.add('ralat'); }
+    if (f.t === 'ic' && v && v.replace(/\D/g, '').length !== 12) { ralat.push(f.l + ' mesti 12 digit'); $(fid(f.k)).classList.add('ralat'); }
+  }));
+  document.querySelectorAll('#dok-list [data-dok] input[data-wajib]').forEach(i => { if (!i.files[0]) ralat.push('Dokumen: ' + i.dataset.label); });
+  if (!$('setuju-pdpa').checked) ralat.push('Persetujuan PDPA');
+  if (!pad || pad.isEmpty()) ralat.push('Tandatangan pemohon');
+  const emel = nilaiIkutKunci(B.peta.emel).toLowerCase();
+  if (!otpSentTo || otpSentTo !== emel) ralat.push('Pengesahan e-mel (tekan "Hantar Kod")');
+  else if (!/^\d{6}$/.test(($('f_otp').value || '').trim())) ralat.push('Kod pengesahan e-mel 6 digit');
+  return ralat;
+}
+
+/* ---------------------------- PDF ---------------------------- */
+function pdfHtml(ref) {
+  const butiran = kutipData();
+  const dok = [...document.querySelectorAll('#dok-list [data-dok] input')].filter(i => i.files[0]).map(i => i.dataset.label + ' — ' + i.files[0].name);
+  const baris = (l, v) => `<tr><td style="width:36%;font-weight:bold">${esc(l)}</td><td>${esc(v).replace(/\n/g, '<br>')}</td></tr>`;
+  let seksyenHtml = '';
+  if (B.skim) {
+    const s = document.querySelector('input[name="f_skim"]:checked');
+    seksyenHtml += `<div class="sec">Jenis Bantuan</div><table>${baris(B.skim.l, s ? s.value : '-')}</table>`;
+  }
+  B.seksyen.forEach(s => {
+    const rows = s.medan.map(f => {
+      const wrap = document.querySelector(`[data-medan="${f.k}"]`);
+      if (wrap && wrap.classList.contains('hidden')) return '';
+      const v = nilaiMedan(f);
+      if (f.t === 'jadual') return v.length ? baris(f.l, jadualTeks(f, v)) : '';
+      return v ? baris(f.l, v) : '';
+    }).join('');
+    if (rows) seksyenHtml += `<div class="sec">${esc(s.tajuk)}</div><table>${rows}</table>`;
+  });
+  return `<div class="a4">
+    <div style="text-align:center;border-bottom:2px solid #000;padding-bottom:10px;margin-bottom:12px">
+      <img src="${LOGO}" crossorigin="anonymous" style="height:60px"><div style="font-weight:bold;font-size:15px;text-transform:uppercase;margin-top:6px">${esc(B.tajuk)}</div>
+      <div style="font-size:11px">MUSLIM CARE MALAYSIA SOCIETY · Kod Borang ${esc(KOD)}</div>
+      <div style="font-size:11px;margin-top:4px">No. Rujukan: <b>${esc(ref || '(akan diberikan)')}</b> · Tarikh: ${fmtDate(todayISO())}</div>
+    </div>
+    ${seksyenHtml}
+    <div class="sec">Lampiran Dokumen</div>
+    <table>${dok.length ? dok.map((d, i) => `<tr><td style="width:24px">${i + 1}</td><td>${esc(d)}</td></tr>`).join('') : '<tr><td>Tiada lampiran</td></tr>'}</table>
+    <div class="sec">Pengakuan &amp; Persetujuan PDPA</div>
+    <ol style="font-size:10px;padding-left:16px;margin:6px 0 10px">${PDPA.map(x => `<li style="margin-bottom:3px;text-align:justify">${esc(x)}</li>`).join('')}</ol>
+    <table><tr>
+      <td style="width:50%"><div style="height:70px"><img src="${pad.toDataURL('image/png')}" style="max-height:68px;max-width:220px"></div>
+        <b>Tandatangan Pemohon</b><br>Nama: ${esc($('tt-nama').value)}<br>${$('tt-jawatan').value ? 'Jawatan: ' + esc($('tt-jawatan').value) + '<br>' : ''}Tarikh: ${fmtDate($('tt-tarikh').value)}</td>
+      <td><div style="height:70px"></div><b>Pengesahan Penyokong</b><br>Nama: ${esc(nilaiIkutKunci('penyokongNama'))}<br>Jawatan: ${esc(nilaiIkutKunci('penyokongJawatan'))}<br>Tarikh: ${fmtDate(nilaiIkutKunci('penyokongTarikh'))}
+        <div style="font-size:9px;font-style:italic;margin-top:4px">Salinan borang sokongan bertandatangan dilampirkan bersama permohonan ini.</div></td>
+    </tr></table>
+    <div style="text-align:center;font-size:9px;color:#555;margin-top:10px;border-top:1px dashed #999;padding-top:6px">Borang janaan komputer melalui Sistem Permohonan Bantuan Muslim Care Malaysia.</div>
+  </div>`;
+}
+
+/* --------------------------- HANTAR --------------------------- */
+async function api(action, data) {
+  const r = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action, ...data }) });
+  const j = await r.json();
+  if (j.status !== 'success') throw new Error(j.message);
+  return j;
+}
+const fileB64 = (file, label) => new Promise((res, rej) => {
+  if (file.size > 3 * 1024 * 1024) return rej(new Error(`Fail "${file.name}" melebihi 3MB`));
+  const rd = new FileReader();
+  rd.onload = () => res({ name: file.name, mimeType: file.type, label, data: String(rd.result).split(',')[1] });
+  rd.onerror = rej; rd.readAsDataURL(file);
+});
+
+async function hantar() {
+  const ralat = semak();
+  if (ralat.length) {
+    alert('Sila lengkapkan perkara berikut:\n\n• ' + ralat.slice(0, 12).join('\n• ') + (ralat.length > 12 ? `\n… dan ${ralat.length - 12} lagi` : ''));
+    document.querySelector('.ralat')?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    return;
+  }
+  setStep(3);
+  busy(true, 'Memuat naik lampiran & menghantar permohonan...');
+  try {
+    const attachments = [];
+    for (const i of [...document.querySelectorAll('#dok-list [data-dok] input')]) {
+      if (i.files[0]) attachments.push(await fileB64(i.files[0], i.dataset.label));
+    }
+    const alamatKeys = Array.isArray(B.peta.alamat) ? B.peta.alamat : [B.peta.alamat];
+    const r = await api('submitPermohonan', {
+      kodBorang: KOD,
+      otp: $('f_otp').value.trim(),
+      email: nilaiIkutKunci(B.peta.emel),
+      nama: nilaiIkutKunci(B.peta.nama),
+      ic: B.peta.ic ? nilaiIkutKunci(B.peta.ic) : '',
+      noDaftar: B.peta.noDaftar ? nilaiIkutKunci(B.peta.noDaftar) : '',
+      telefon: nilaiIkutKunci(B.peta.telefon),
+      alamat: alamatKeys.map(k => nilaiIkutKunci(k)).filter(Boolean).join(', '),
+      jenisBantuan: (B.skim ? (document.querySelector('input[name="f_skim"]:checked') || {}).value : nilaiIkutKunci(B.peta.jenis)) || '',
+      tarikh: todayISO(),
+      attachments,
+      butiran: kutipData()
+    });
+    lastRef = r.refNo;
+    busy(true, `Permohonan diterima (${esc(r.refNo)}).<br><span class="text-sm font-normal">Menjana salinan PDF...</span>`);
+    try {
+      lastPdfHtml = pdfHtml(r.refNo);
+      $('pdf-stage').innerHTML = lastPdfHtml;
+      const pdfBase64 = await html2pdf().set({ margin: 0, image: { type: 'jpeg', quality: 0.95 }, html2canvas: { scale: 2, useCORS: true }, jsPDF: { unit: 'mm', format: 'a4' } }).from($('pdf-stage').firstElementChild).output('datauristring');
+      await api('uploadPdfPermohonan', { refNo: r.refNo, uploadToken: r.uploadToken, pdfBase64 });
+    } catch (e) { console.warn('PDF gagal dimuat naik:', e); }
+    $('ref-no').textContent = r.refNo;
+    show('v-berjaya'); window.scrollTo(0, 0);
+  } catch (err) {
+    alert('Ralat: ' + err.message);
+  } finally { busy(false); $('pdf-stage').innerHTML = ''; }
+}
+
+function setupPad() {
+  const c = $('sig');
+  const ratio = Math.max(window.devicePixelRatio || 1, 1);
+  c.width = c.offsetWidth * ratio; c.height = c.offsetHeight * ratio;
+  c.getContext('2d').scale(ratio, ratio);
+  pad = new SignaturePad(c, { penColor: 'rgb(0,0,0)' });
+}
+
+/* ---------------------------- INIT ---------------------------- */
+$('btn-balik').addEventListener('click', () => { show('v-syarat'); window.scrollTo(0, 0); });
+$('btn-hantar').addEventListener('click', hantar);
+$('btn-muat').addEventListener('click', () => {
+  $('pdf-stage').innerHTML = lastPdfHtml;
+  html2pdf().set({ margin: 0, filename: `Borang_${lastRef.replace(/\//g, '-')}.pdf`, image: { type: 'jpeg', quality: 0.95 }, html2canvas: { scale: 2, useCORS: true }, jsPDF: { unit: 'mm', format: 'a4' } }).from($('pdf-stage').firstElementChild).save();
+});
+
+if (!B) renderSenarai();
+else { renderSyarat(); renderBorang(); }
+</script>
+</body>
+</html>

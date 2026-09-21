@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Panel Pentadbir MCM</title>
+<link rel="icon" href="https://i.postimg.cc/7LryVYZ0/image.png" type="image/png">
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<style>
+  body { font-family: 'Inter', sans-serif; background:#f3f4f6; }
+  .modal-bg { background: rgba(0,0,0,.5); backdrop-filter: blur(2px); }
+  .mcm-spin { position:relative; width:86px; height:86px; display:grid; place-items:center; margin:0 auto; }
+  .mcm-spin::before { content:''; position:absolute; inset:0; border:3px solid #d1fae5; border-top-color:#059669; border-radius:50%; animation:spin 1s linear infinite; }
+  .mcm-spin img { width:56px; height:56px; object-fit:contain; animation:mcmpulse 1.4s ease-in-out infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes mcmpulse { 0%,100% { transform:scale(.9); opacity:.75 } 50% { transform:scale(1.06); opacity:1 } }
+  .sig-wrap { position:relative; width:100%; height:140px; border:2px dashed #d1d5db; border-radius:.5rem; background:#f9fafb; }
+  .sig-wrap canvas { position:absolute; inset:0; width:100%; height:100%; }
+  .chip { padding:.35rem .75rem; border-radius:9999px; font-size:.75rem; font-weight:600; border:1px solid #d1d5db; background:#fff; white-space:nowrap; }
+  .chip.on { background:#065f46; color:#fff; border-color:#065f46; }
+  .tab { padding:.75rem .5rem; color:#6b7280; font-weight:500; white-space:nowrap; border-bottom:2px solid transparent; }
+  .tab.on { color:#059669; border-color:#059669; font-weight:600; }
+  .inp { width:100%; border:1px solid #d1d5db; border-radius:.375rem; padding:.45rem .6rem; font-size:.875rem; outline:none; }
+  .inp:focus { border-color:#059669; box-shadow:0 0 0 1px #059669; }
+  .lbl { display:block; font-size:.75rem; font-weight:600; color:#374151; margin-bottom:.25rem; }
+  .btn { padding:.5rem 1rem; border-radius:.375rem; font-weight:600; font-size:.875rem; display:inline-flex; align-items:center; gap:.4rem; }
+  #pdf-stage { position:fixed; left:0; top:0; z-index:-1; opacity:0; pointer-events:none; }
+  .a4 { width:794px; background:#fff; color:#000; font-family: Arial, sans-serif; font-size:13px; line-height:1.55; padding:40px 48px; }
+  .a4 .box { display:inline-flex; width:14px; height:14px; border:1px solid #000; align-items:center; justify-content:center; font-size:11px; font-weight:bold; margin-right:8px; vertical-align:middle; }
+  .a4 table.k { width:100%; border-collapse:collapse; }
+  .a4 table.k td { border:1.5px solid #000; padding:6px 8px; vertical-align:middle; }
+  .a4 .kl { font-weight:bold; background:#f3f4f6; font-size:11px; text-transform:uppercase; }
+  #toast { position:fixed; bottom:20px; right:20px; z-index:9999; display:flex; flex-direction:column; gap:8px; }
+  .toast { padding:10px 16px; border-radius:8px; color:#fff; font-weight:600; font-size:14px; box-shadow:0 4px 8px rgba(0,0,0,.15); }
+</style>
+</head>
+<body class="text-gray-800 min-h-screen">
+
+<!-- ================= LOGIN ================= -->
+<div id="view-login" class="min-h-screen flex items-center justify-center p-4 hidden">
+  <div class="bg-white rounded-xl shadow-lg w-full max-w-sm p-8">
+    <img src="https://i.postimg.cc/7LryVYZ0/image.png" class="h-16 mx-auto mb-4" alt="MCM">
+    <h1 class="text-center font-bold text-lg mb-1">Panel Pentadbir MCM</h1>
+    <p class="text-center text-sm text-gray-500 mb-6">Log masuk dengan e-mel & PIN 6 digit</p>
+    <form id="login-form" class="space-y-4">
+      <div><label class="lbl">E-mel</label><input id="login-email" type="email" class="inp" required autocomplete="username"></div>
+      <div><label class="lbl">PIN</label><input id="login-pin" type="password" inputmode="numeric" maxlength="6" class="inp tracking-widest" required autocomplete="current-password"></div>
+      <button class="btn bg-emerald-600 hover:bg-emerald-700 text-white w-full justify-center py-2.5">Log Masuk</button>
+    </form>
+  </div>
+</div>
+
+<!-- ================= APP ================= -->
+<div id="view-app" class="hidden min-h-screen flex flex-col">
+  <header class="bg-gray-900 text-white shadow">
+    <div class="px-4 md:px-6 py-3 flex items-center justify-between gap-3">
+      <div class="flex items-center gap-3 min-w-0">
+        <img src="https://i.postimg.cc/7LryVYZ0/image.png" class="h-9 bg-white/10 p-1 rounded" alt="">
+        <div class="min-w-0"><div class="font-bold leading-tight">Panel Pentadbir Bersepadu</div><div class="text-xs text-gray-400 truncate" id="me-label"></div></div>
+      </div>
+      <div class="flex items-center gap-2">
+        <button onclick="loadData()" class="btn bg-gray-800 border border-gray-600 hover:bg-gray-700 text-xs"><i class="fa-solid fa-rotate-right"></i><span class="hidden sm:inline">Segar Semula</span></button>
+        <button onclick="openTukarPin()" class="btn bg-gray-800 border border-gray-600 hover:bg-gray-700 text-xs"><i class="fa-solid fa-key"></i></button>
+        <button onclick="logout()" class="btn bg-red-700 hover:bg-red-800 text-xs"><i class="fa-solid fa-right-from-bracket"></i></button>
+      </div>
+    </div>
+    <nav class="bg-white px-4 md:px-6 flex gap-5 overflow-x-auto text-sm border-b" id="tabs"></nav>
+  </header>
+
+  <main class="flex-1 p-4 md:p-6">
+    <!-- DASHBOARD -->
+    <section id="tab-dash" class="max-w-7xl mx-auto space-y-6 hidden">
+      <div id="my-tasks" class="grid grid-cols-2 md:grid-cols-4 gap-3"></div>
+      <div class="grid grid-cols-2 md:grid-cols-5 gap-3" id="stat-cards"></div>
+      <div class="grid lg:grid-cols-2 gap-6">
+        <div class="bg-white p-5 rounded-xl shadow-sm"><h3 class="font-bold mb-3">Permohonan Mengikut Borang</h3><div class="h-64"><canvas id="chartBorang"></canvas></div></div>
+        <div class="bg-white p-5 rounded-xl shadow-sm"><h3 class="font-bold mb-3">Status Keseluruhan</h3><div class="h-64"><canvas id="chartStatus"></canvas></div></div>
+      </div>
+    </section>
+
+    <!-- SENARAI -->
+    <section id="tab-list" class="max-w-7xl mx-auto hidden">
+      <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+        <div class="p-4 border-b bg-gray-50 space-y-3">
+          <div class="flex flex-wrap gap-2 items-center justify-between">
+            <h2 class="font-bold">Senarai Permohonan</h2>
+            <div class="flex gap-2 flex-wrap">
+              <select id="f-borang" class="inp !w-auto text-xs" onchange="renderList()"></select>
+              <input id="f-search" class="inp !w-56 text-xs" placeholder="Cari rujukan / nama / K/P / telefon" oninput="renderList()">
+              <label class="flex items-center gap-1 text-xs font-semibold text-red-700"><input type="checkbox" id="f-berulang" onchange="renderList()"> Berulang sahaja</label>
+              <button onclick="exportMasterlist()" class="btn bg-emerald-700 hover:bg-emerald-800 text-white text-xs"><i class="fa-solid fa-file-csv"></i> Eksport Masterlist</button>
+            </div>
+          </div>
+          <div id="f-status" class="flex gap-2 overflow-x-auto pb-1"></div>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="bg-gray-100 text-gray-600 uppercase text-xs"><tr>
+              <th class="px-4 py-3 text-left">No. Rujukan</th><th class="px-4 py-3 text-left">Pemohon</th><th class="px-4 py-3 text-left">Borang / Bantuan</th>
+              <th class="px-4 py-3 text-left">Tarikh</th><th class="px-4 py-3 text-left">Status</th><th class="px-4 py-3 text-left">Berulang 6 Bln</th><th class="px-4 py-3 text-left">PIC</th><th class="px-4 py-3"></th>
+            </tr></thead>
+            <tbody id="list-body" class="divide-y"></tbody>
+          </table>
+          <p id="list-empty" class="hidden text-center text-gray-500 py-10 text-sm">Tiada rekod.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- DAFTAR MANUAL -->
+    <section id="tab-manual" class="max-w-3xl mx-auto hidden">
+      <div class="bg-white rounded-xl shadow-sm p-6">
+        <h2 class="font-bold text-lg mb-1">Daftar Borang Manual</h2>
+        <p class="text-sm text-gray-500 mb-5">Borang fizikal yang diterima akan mengambil nombor rujukan seterusnya, supaya nombor online dan manual tidak bertindih.</p>
+        <form id="manual-form" class="grid md:grid-cols-2 gap-4">
+          <div class="md:col-span-2"><label class="lbl">Jenis Borang *</label><select id="m-kod" class="inp" required onchange="previewManualRef()"></select><p class="text-xs text-emerald-700 mt-1 font-semibold" id="m-ref-preview"></p></div>
+          <div class="md:col-span-2"><label class="lbl">Nama Pemohon / Organisasi *</label><input id="m-nama" class="inp uppercase" required></div>
+          <div><label class="lbl">No. K/P (12 digit, kosongkan jika organisasi)</label><input id="m-ic" class="inp" maxlength="14"></div>
+          <div><label class="lbl">No. Telefon</label><input id="m-tel" class="inp"></div>
+          <div><label class="lbl">E-mel</label><input id="m-emel" type="email" class="inp"></div>
+          <div><label class="lbl">Tarikh Terima *</label><input id="m-tarikh" type="date" class="inp" required></div>
+          <div><label class="lbl">Permohonan / Jenis Bantuan</label><input id="m-jenis" class="inp uppercase"></div>
+          <div><label class="lbl">PIC</label><input id="m-pic" class="inp uppercase"></div>
+          <div class="md:col-span-2"><label class="lbl">Alamat</label><input id="m-alamat" class="inp uppercase"></div>
+          <div class="md:col-span-2"><label class="lbl">Catatan</label><textarea id="m-catatan" rows="2" class="inp"></textarea></div>
+          <div class="md:col-span-2"><label class="lbl">Imbasan Borang (PDF/JPG, maks 5MB)</label><input id="m-fail" type="file" accept=".pdf,image/png,image/jpeg" class="text-sm"></div>
+          <div class="md:col-span-2 flex justify-end"><button class="btn bg-emerald-600 hover:bg-emerald-700 text-white"><i class="fa-solid fa-plus"></i> Daftar & Jana No. Rujukan</button></div>
+        </form>
+      </div>
+    </section>
+
+    <!-- TETAPAN -->
+    <section id="tab-settings" class="max-w-7xl mx-auto hidden space-y-6"></section>
+  </main>
+</div>
+
+<!-- ================= MODALS ================= -->
+<div id="modal-detail" class="fixed inset-0 z-40 modal-bg hidden overflow-y-auto p-3 md:p-8">
+  <div class="bg-white rounded-xl shadow-2xl max-w-5xl mx-auto overflow-hidden">
+    <div class="bg-gray-900 text-white px-5 py-3 flex justify-between items-center sticky top-0 z-10">
+      <h3 class="font-bold" id="d-title">Butiran</h3>
+      <button onclick="closeModal('modal-detail')" class="text-gray-400 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+    </div>
+    <div id="d-body" class="p-5 space-y-5 text-sm"></div>
+    <div id="d-actions" class="px-5 py-4 border-t bg-gray-50 flex flex-wrap justify-end gap-2"></div>
+  </div>
+</div>
+
+<div id="modal-action" class="fixed inset-0 z-50 modal-bg hidden overflow-y-auto p-3 md:p-8">
+  <div class="bg-white rounded-xl shadow-2xl max-w-3xl mx-auto overflow-hidden">
+    <div class="bg-emerald-800 text-white px-5 py-3 flex justify-between items-center sticky top-0 z-10">
+      <h3 class="font-bold" id="a-title"></h3>
+      <button onclick="closeModal('modal-action')" class="text-emerald-200 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+    </div>
+    <div id="a-body" class="p-5 space-y-5 text-sm"></div>
+    <div id="a-actions" class="px-5 py-4 border-t bg-gray-50 flex flex-wrap justify-end gap-2"></div>
+  </div>
+</div>
+
+<div id="loader" class="fixed inset-0 z-[60] bg-white/85 hidden flex flex-col items-center justify-center">
+  <div class="mcm-spin mb-4"><img src="https://i.postimg.cc/7LryVYZ0/image.png" crossorigin="anonymous" alt=""></div><p id="loader-text" class="text-emerald-800 font-medium">Memuatkan...</p>
+</div>
+<div id="pdf-stage"></div>
+<div id="toast"></div>
+
+<script>
+/* ==========================================================
+   KONFIGURASI
+   ========================================================== */
+const API_URL = 'https://script.google.com/macros/s/AKfycbzjZRBiOeFxkc47QYwhCpaxoKg_p-NH0oCrx6AzXmBks6AIntxDeVJTBX0BqR7rbQlq7w/exec';
+const LOGO = 'https://i.postimg.cc/7LryVYZ0/image.png';
+const BIL_PINDAAN_SURAT = '2 (Ogos 2026)';
+const KAEDAH_KELULUSAN = ['MESYUARAT', 'LULUS LOA PRESIDEN', 'LULUS LOA TIMB. PRESIDEN', 'LULUS LOA MAJLIS PRESIDEN', 'LULUS DALAM GROUP RASMI BOD'];
+const STATUS_ORDER = ['BARU','SEMAKAN_SEMULA','MESYUARAT','TUNGGU_PENGARAH','TUNGGU_PENGESAHAN','TUNGGU_KEWANGAN','TUNGGU_BAYARAN','TUNGGU_LAPORAN','SELESAI','DITOLAK','TIDAK_SETUJU'];
+const STATUS_COLOR = { BARU:'amber', SEMAKAN_SEMULA:'orange', MESYUARAT:'blue', TUNGGU_PENGARAH:'indigo', TUNGGU_PENGESAHAN:'teal', TUNGGU_KEWANGAN:'purple', TUNGGU_BAYARAN:'fuchsia', TUNGGU_LAPORAN:'cyan', SELESAI:'gray', DITOLAK:'red', TIDAK_SETUJU:'rose' };
+// Tailwind CDN perlukan nama kelas penuh wujud dalam fail:
+// bg-amber-100 text-amber-800 bg-orange-100 text-orange-800 bg-blue-100 text-blue-800 bg-indigo-100 text-indigo-800 bg-teal-100 text-teal-800 bg-purple-100 text-purple-800 bg-fuchsia-100 text-fuchsia-800 bg-cyan-100 text-cyan-800 bg-gray-200 text-gray-800 bg-red-100 text-red-800 bg-rose-100 text-rose-800 border-rose-500 border-amber-500 border-orange-500 border-blue-500 border-indigo-500 border-teal-500 border-purple-500 border-fuchsia-500 border-cyan-500 border-gray-500 border-red-500
+
+let TOKEN = null, ME = null, DB = null;
+let filterStatus = 'AKTIF';
+let charts = {};
+let pads = {};
+
+/* ==========================================================
+   UTIL
+   ========================================================== */
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmtDate = d => { if (!d) return '-'; const x = new Date(d); if (isNaN(x)) return esc(d); return `${String(x.getDate()).padStart(2,'0')}/${String(x.getMonth()+1).padStart(2,'0')}/${x.getFullYear()}`; };
+const todayISO = () => { const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0,10); };
+const rm = n => 'RM ' + Number(n || 0).toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const hasRole = (...r) => ME && (ME.peranan.includes('SUPERADMIN') || r.some(x => ME.peranan.includes(x)));
+const statusLabel = s => (DB?.statusLabels || {})[s] || s;
+const badge = s => { const c = STATUS_COLOR[s] || 'gray'; return `<span class="bg-${c === 'gray' ? 'gray-200' : c + '-100'} text-${c}-800 text-xs px-2 py-1 rounded font-bold whitespace-nowrap">${esc(statusLabel(s))}</span>`; };
+const hijri = d => { try { return new Intl.DateTimeFormat('ms-MY-u-ca-islamic', { day:'numeric', month:'long', year:'numeric' }).format(d); } catch (e) { return ''; } };
+
+function toast(msg, type = 'ok') {
+  const el = document.createElement('div');
+  el.className = 'toast ' + (type === 'ok' ? 'bg-emerald-600' : type === 'err' ? 'bg-red-600' : 'bg-blue-600');
+  el.textContent = msg; $('toast').appendChild(el);
+  setTimeout(() => el.remove(), 5000);
+}
+function loading(on, text = 'Memproses...') { $('loader-text').textContent = text; $('loader').classList.toggle('hidden', !on); }
+function openModal(id) { $(id).classList.remove('hidden'); }
+function closeModal(id) { $(id).classList.add('hidden'); }
+
+async function api(action, data = {}) {
+  const res = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action, token: TOKEN, ...data }) });
+  const j = await res.json();
+  if (j.status !== 'success') {
+    if (j.message === 'SESI_TAMAT') { toast('Sesi tamat. Sila log masuk semula.', 'err'); logout(); }
+    throw new Error(j.message);
+  }
+  return j;
+}
+
+function fileToB64(file, maxMB = 5) {
+  return new Promise((resolve, reject) => {
+    if (!file) return resolve(null);
+    if (file.size > maxMB * 1024 * 1024) return reject(new Error(`Fail "${file.name}" melebihi ${maxMB}MB`));
+    const r = new FileReader();
+    r.onload = () => resolve({ name: file.name, mimeType: file.type, data: String(r.result).split(',')[1] });
+    r.onerror = reject; r.readAsDataURL(file);
+  });
+}
+
+function makePad(canvasId) {
+  const c = $(canvasId); if (!c) return null;
+  const ratio = Math.max(window.devicePixelRatio || 1, 1);
+  c.width = c.offsetWidth * ratio; c.height = c.offsetHeight * ratio;
+  c.getContext('2d').scale(ratio, ratio);
+  pads[canvasId] = new SignaturePad(c, { penColor: 'rgb(0,0,128)' });
+  return pads[canvasId];
+}
+const sigBlock = (id, label) => `<div><div class="flex justify-between items-end mb-1"><span class="lbl !mb-0">${label}</span><button type="button" class="text-xs text-red-600" onclick="pads['${id}']?.clear()"><i class="fa-solid fa-eraser"></i> Padam</button></div><div class="sig-wrap"><canvas id="${id}"></canvas></div></div>`;
+
+async function makePdf(html, filename) {
+  const stage = $('pdf-stage');
+  stage.innerHTML = html;
+  await Promise.all([...stage.querySelectorAll('img')].map(img => img.complete ? 1 : new Promise(r => { img.onload = img.onerror = r; })));
+  const opt = { margin: 0, filename, image: { type: 'jpeg', quality: 0.95 }, html2canvas: { scale: 2, useCORS: true }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }, pagebreak: { mode: ['css', 'legacy'] } };
+  const out = await html2pdf().set(opt).from(stage.firstElementChild).output('datauristring');
+  return out;
+}
+async function previewPdf(html, filename) {
+  const stage = $('pdf-stage'); stage.innerHTML = html;
+  await html2pdf().set({ margin: 0, filename, image: { type: 'jpeg', quality: 0.95 }, html2canvas: { scale: 2, useCORS: true }, jsPDF: { unit: 'mm', format: 'a4' } }).from(stage.firstElementChild).save();
+}
+
+/* ==========================================================
+   AUTH
+   ========================================================== */
+function saveSession() { try { sessionStorage.setItem('mcm_sess', JSON.stringify({ TOKEN, ME })); } catch (e) {} }
+function logout() { TOKEN = null; ME = null; try { sessionStorage.removeItem('mcm_sess'); } catch (e) {} $('view-app').classList.add('hidden'); $('view-login').classList.remove('hidden'); }
+
+$('login-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  loading(true, 'Log masuk...');
+  try {
+    const r = await api('login', { email: $('login-email').value, pin: $('login-pin').value });
+    TOKEN = r.token; ME = r.user; saveSession();
+    $('login-pin').value = '';
+    await startApp();
+    if (r.pinDefault) { toast('Anda masih guna PIN sementara. Sila tukar PIN sekarang.', 'info'); openTukarPin(); }
+  } catch (err) { toast(err.message, 'err'); } finally { loading(false); }
+});
+
+function openTukarPin() {
+  $('a-title').textContent = 'Tukar PIN';
+  $('a-body').innerHTML = `<div class="grid gap-3 max-w-xs"><div><label class="lbl">PIN Lama</label><input id="pin-lama" type="password" maxlength="6" class="inp"></div><div><label class="lbl">PIN Baru (6 digit)</label><input id="pin-baru" type="password" maxlength="6" class="inp"></div><div><label class="lbl">Ulang PIN Baru</label><input id="pin-baru2" type="password" maxlength="6" class="inp"></div></div>`;
+  $('a-actions').innerHTML = `<button class="btn bg-emerald-600 text-white" onclick="doTukarPin()">Simpan PIN</button>`;
+  openModal('modal-action');
+}
+async function doTukarPin() {
+  if ($('pin-baru').value !== $('pin-baru2').value) return toast('PIN baru tidak sepadan.', 'err');
+  loading(true);
+  try { await api('tukarPin', { pinLama: $('pin-lama').value, pinBaru: $('pin-baru').value }); toast('PIN berjaya ditukar.'); closeModal('modal-action'); }
+  catch (err) { toast(err.message, 'err'); } finally { loading(false); }
+}
+
+/* ==========================================================
+   APP
+   ========================================================== */
+async function startApp() {
+  $('view-login').classList.add('hidden'); $('view-app').classList.remove('hidden');
+  $('me-label').textContent = `${ME.nama} · ${ME.peranan.join(', ')}`;
+  const tabs = [['dash','fa-chart-pie','Dashboard'], ['list','fa-list-check','Permohonan']];
+  if (hasRole('ADMIN')) tabs.push(['manual','fa-file-circle-plus','Daftar Manual']);
+  if (hasRole('ADMIN')) tabs.push(['settings','fa-gear','Tetapan']);
+  $('tabs').innerHTML = tabs.map(t => `<button class="tab" data-tab="${t[0]}" onclick="switchTab('${t[0]}')"><i class="fa-solid ${t[1]} mr-1.5"></i>${t[2]}</button>`).join('');
+  await loadData();
+  switchTab('dash');
+}
+
+function switchTab(id) {
+  document.querySelectorAll('#tabs .tab').forEach(b => b.classList.toggle('on', b.dataset.tab === id));
+  ['dash','list','manual','settings'].forEach(t => $('tab-' + t).classList.toggle('hidden', t !== id));
+}
+
+async function loadData() {
+  loading(true, 'Memuat turun data...');
+  try {
+    DB = await api('getAdminData');
+    ME = DB.me; saveSession();
+    renderDashboard(); renderFilters(); renderList(); renderManualForm(); renderSettings();
+  } catch (err) { if (err.message !== 'SESI_TAMAT') toast('Ralat: ' + err.message, 'err'); }
+  finally { loading(false); }
+}
+
+/* ---------------- DASHBOARD ---------------- */
+function myTaskStatuses() {
+  const s = [];
+  if (hasRole('ADMIN')) s.push(['BARU','Saringan'], ['TUNGGU_LAPORAN','Laporan']);
+  if (hasRole('MESYUARAT','ADMIN')) s.push(['MESYUARAT','Mesyuarat']);
+  if (hasRole('PENGARAH')) s.push(['TUNGGU_PENGARAH','Tandatangan']);
+  if (hasRole('KEWANGAN')) s.push(['TUNGGU_KEWANGAN','KEW-04'], ['TUNGGU_BAYARAN','Bayaran']);
+  const seen = {}; return s.filter(x => !seen[x[0]] && (seen[x[0]] = 1));
+}
+function renderDashboard() {
+  const P = DB.permohonan;
+  const count = s => P.filter(p => p.status === s).length;
+  $('my-tasks').innerHTML = myTaskStatuses().map(([s, l]) => `
+    <button onclick="filterStatus='${s}';switchTab('list');renderFilters();renderList()" class="text-left bg-white rounded-xl shadow-sm p-4 border-l-4 border-${STATUS_COLOR[s]}-500 hover:shadow-md transition">
+      <div class="text-xs font-bold uppercase text-gray-500">Tugasan: ${l}</div><div class="text-3xl font-extrabold mt-1">${count(s)}</div></button>`).join('');
+  const berulang = P.filter(p => p.berulang.length && !['SELESAI','DITOLAK','TIDAK_SETUJU'].includes(p.status)).length;
+  const cards = [['Jumlah', P.length, 'gray'], ['Dalam Proses', P.filter(p => !['SELESAI','DITOLAK','TIDAK_SETUJU'].includes(p.status)).length, 'blue'], ['Selesai', count('SELESAI'), 'emerald'], ['Tidak Lulus', count('DITOLAK'), 'red'], ['⚠ Berulang (aktif)', berulang, 'orange']];
+  $('stat-cards').innerHTML = cards.map(c => `<div class="bg-white rounded-xl shadow-sm p-4"><div class="text-xs font-bold uppercase text-gray-500">${c[0]}</div><div class="text-2xl font-extrabold text-${c[2]}-700 mt-1">${c[1]}</div></div>`).join('');
+  // text-gray-700 text-blue-700 text-emerald-700 text-red-700 text-orange-700
+
+  const byBorang = {}; P.forEach(p => byBorang[p.namaBorang] = (byBorang[p.namaBorang] || 0) + 1);
+  charts.b?.destroy(); charts.s?.destroy();
+  charts.b = new Chart($('chartBorang'), { type: 'bar', data: { labels: Object.keys(byBorang), datasets: [{ data: Object.values(byBorang), backgroundColor: '#059669', borderRadius: 4 }] }, options: { maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } } });
+  const st = STATUS_ORDER.filter(s => count(s));
+  charts.s = new Chart($('chartStatus'), { type: 'doughnut', data: { labels: st.map(statusLabel), datasets: [{ data: st.map(count), backgroundColor: ['#f59e0b','#f97316','#3b82f6','#6366f1','#14b8a6','#a855f7','#d946ef','#06b6d4','#9ca3af','#ef4444','#f43f5e'].filter((_, i) => count(STATUS_ORDER[i])), borderWidth: 0 }] }, options: { maintainAspectRatio: false, plugins: { legend: { position: 'right' } } } });
+}
+
+/* ---------------- SENARAI ---------------- */
+function renderFilters() {
+  const P = DB.permohonan;
+  const chips = [['AKTIF', 'Dalam Proses', P.filter(p => !['SELESAI','DITOLAK','TIDAK_SETUJU'].includes(p.status)).length], ['SEMUA', 'Semua', P.length], ...STATUS_ORDER.map(s => [s, statusLabel(s), P.filter(p => p.status === s).length])];
+  $('f-status').innerHTML = chips.map(c => `<button class="chip ${filterStatus === c[0] ? 'on' : ''}" onclick="filterStatus='${c[0]}';renderFilters();renderList()">${esc(c[1])} (${c[2]})</button>`).join('');
+  const cur = $('f-borang').value;
+  $('f-borang').innerHTML = `<option value="">Semua Borang</option>` + DB.borang.map(b => `<option value="${esc(b['Kod'])}">${esc(b['Kod'])} ${esc(b['Nama Borang'])}</option>`).join('');
+  $('f-borang').value = cur;
+}
+
+function renderList() {
+  const q = $('f-search').value.trim().toLowerCase();
+  const qd = q.replace(/\D/g, '');
+  const kod = $('f-borang').value;
+  const onlyDup = $('f-berulang').checked;
+  const list = DB.permohonan.filter(p => {
+    if (filterStatus === 'AKTIF' && ['SELESAI','DITOLAK','TIDAK_SETUJU'].includes(p.status)) return false;
+    if (!['AKTIF','SEMUA'].includes(filterStatus) && p.status !== filterStatus) return false;
+    if (kod && String(p.kodBorang) !== kod) return false;
+    if (onlyDup && !p.berulang.length) return false;
+    if (q) {
+      const hay = [p.refNo, p.nama, p.emel].join(' ').toLowerCase();
+      const hayD = [p.ic, p.telefon].join(' ').replace(/\D/g, '');
+      if (!hay.includes(q) && !(qd.length >= 4 && hayD.includes(qd))) return false;
+    }
+    return true;
+  }).sort((a, b) => new Date(b.tarikhSubmit) - new Date(a.tarikhSubmit));
+
+  $('list-empty').classList.toggle('hidden', list.length > 0);
+  $('list-body').innerHTML = list.map(p => `
+    <tr class="hover:bg-gray-50 cursor-pointer" onclick="openDetail('${esc(p.refNo)}')">
+      <td class="px-4 py-3 font-semibold whitespace-nowrap">${esc(p.refNo)}${p.sumber === 'MANUAL' ? ' <span class="text-[10px] bg-gray-200 px-1 rounded">MANUAL</span>' : ''}</td>
+      <td class="px-4 py-3"><div class="font-medium uppercase">${esc(p.nama)}</div>
+</td>
+      <td class="px-4 py-3"><div class="text-xs text-gray-500">${esc(p.kodBorang)} ${esc(p.namaBorang)}</div><div>${esc(p.jenisBantuan || '-')}</div></td>
+      <td class="px-4 py-3 whitespace-nowrap">${fmtDate(p.tarikhSubmit)}</td>
+      <td class="px-4 py-3">${badge(p.status)}</td>
+      <td class="px-4 py-3">${p.berulang.length
+        ? `<div class="text-xs font-bold text-red-700">YA (${p.berulang.length})</div><div class="text-[10px] text-red-600">${esc([...new Set(p.berulang.flatMap(b => b.sebab))].join(', '))}</div>`
+        : '<span class="text-xs text-gray-400">Tidak</span>'}</td>
+      <td class="px-4 py-3 text-xs">${esc(p.pic || '-')}</td>
+      <td class="px-4 py-3 text-right"><button class="btn bg-blue-600 hover:bg-blue-700 text-white text-xs !py-1.5">Buka <i class="fa-solid fa-angle-right"></i></button></td>
+    </tr>`).join('');
+}
+
+/* ---------------- BUTIRAN ---------------- */
+const BUTIRAN_LABEL = { jantina:'Jantina', pengajian:'Jenis Pengajian', institusi:'Institusi', alasan:'Alasan Permohonan', p1Nama:'Penjaga 1 - Nama', p1IC:'Penjaga 1 - No K/P', p1Kerja:'Penjaga 1 - Pekerjaan', p1Gaji:'Penjaga 1 - Pendapatan (RM)', p2Nama:'Penjaga 2 - Nama', p2IC:'Penjaga 2 - No K/P', p2Kerja:'Penjaga 2 - Pekerjaan', p2Gaji:'Penjaga 2 - Pendapatan (RM)', tanggungan:'Bil. Tanggungan', catatanManual:'Catatan (Manual)' };
+const kv = (k, v) => `<div><div class="text-[11px] text-gray-500 uppercase font-semibold">${esc(k)}</div><div class="font-medium break-words">${v === undefined || v === '' || v === null ? '-' : esc(v)}</div></div>`;
+const section = (title, inner, extra = '') => `<div class="border rounded-lg overflow-hidden ${extra}"><div class="bg-gray-100 px-4 py-2 font-bold text-xs uppercase tracking-wide">${title}</div><div class="p-4">${inner}</div></div>`;
+
+function sumbanganHtml(s) {
+  if (!s) return '<p class="text-gray-500">Belum direkod.</p>';
+  const brg = parseBarang(s);
+  return `<div class="grid md:grid-cols-3 gap-3">${kv('Bentuk', DB.bentukLabels[s['Bentuk']] || s['Bentuk'])}${kv('Jumlah Wang', s['Jumlah Wang RM'] ? rm(s['Jumlah Wang RM']) : '-')}${kv('Tujuan', s['Tujuan'])}
+    ${s['Pembekal Nama'] ? kv('Pembekal', `${s['Pembekal Nama']} · ${s['Pembekal Bank']} ${s['Pembekal No Akaun']}`) : ''}</div>
+    ${brg.length ? `<table class="w-full mt-3 text-xs border"><tr class="bg-gray-50"><th class="p-2 text-left">Barangan</th><th class="p-2">Kuantiti</th><th class="p-2 text-right">Harga Seunit</th><th class="p-2 text-right">Jumlah</th></tr>${brg.map(b => `<tr class="border-t"><td class="p-2">${esc(b.nama)}</td><td class="p-2 text-center">${esc(b.kuantiti)} ${esc(b.unit)}</td><td class="p-2 text-right">${b.hargaSeunit ? rm(b.hargaSeunit) : '-'}</td><td class="p-2 text-right">${b.hargaSeunit ? rm(b.hargaSeunit * b.kuantiti) : '-'}</td></tr>`).join('')}</table>` : ''}`;
+}
+const parseBarang = s => { try { return JSON.parse(s?.['Barangan JSON'] || '[]'); } catch (e) { return []; } };
+const getP = ref => DB.permohonan.find(p => p.refNo === ref);
+
+function openDetail(ref) {
+  const p = getP(ref); if (!p) return;
+  const s = DB.sumbangan[ref], g = DB.pengesahan[ref], k = DB.kewangan[ref], l = DB.laporan[ref], kep = DB.keputusan[ref] || [];
+  $('d-title').textContent = `${p.refNo} · ${p.nama}`;
+  const butiranList = Array.isArray(p.butiran)
+    ? p.butiran.filter(x => x && x.v !== '' && x.v !== undefined && x.v !== null).map(x => [x.l, x.v])
+    : Object.keys(p.butiran || {}).filter(x => p.butiran[x] !== '' && p.butiran[x] !== undefined).map(x => [BUTIRAN_LABEL[x] || x, p.butiran[x]]);
+  let html = '';
+  if (p.berulang.length) {
+    html += `<div class="bg-red-50 border border-red-300 rounded-lg p-4"><div class="font-bold text-red-800 mb-2"><i class="fa-solid fa-triangle-exclamation"></i> AMARAN: Padanan dengan permohonan lain dalam tempoh ${esc(DB.umum.BULAN_SEMAK_BERULANG)} bulan</div>
+      <table class="w-full text-xs"><tr class="text-left text-red-900"><th class="py-1">Rujukan</th><th>Nama</th><th>Tarikh</th><th>Status</th><th>Padanan</th></tr>
+      ${p.berulang.map(b => `<tr class="border-t border-red-200"><td class="py-1"><a class="underline font-semibold" href="#" onclick="event.preventDefault();openDetail('${esc(b.refNo)}')">${esc(b.refNo)}</a></td><td class="uppercase">${esc(b.nama)}</td><td>${esc(b.tarikh)}</td><td>${esc(b.status)}</td><td class="font-bold">${esc(b.sebab.join(', '))}</td></tr>`).join('')}</table></div>`;
+  }
+  html += `<div class="flex flex-wrap items-center gap-3">${badge(p.status)} <span class="text-xs text-gray-500">Sumber: ${esc(p.sumber)}</span>${p.catatan ? `<span class="text-xs bg-yellow-50 border border-yellow-200 px-2 py-1 rounded">Catatan terkini: ${esc(p.catatan)}</span>` : ''}</div>`;
+  html += section('Maklumat Pemohon', `<div class="grid md:grid-cols-3 gap-3">${kv('Borang', p.kodBorang + ' ' + p.namaBorang)}${kv('Jenis Bantuan', p.jenisBantuan)}${kv('Tarikh Terima', fmtDate(p.tarikhSubmit))}${kv('Nama', p.nama)}${kv('No K/P', p.ic)}${kv('Telefon', p.telefon)}${kv('E-mel', p.emel)}${kv('PIC', p.pic)}${kv('Alamat', p.alamat)}</div>
+    ${butiranList.length ? `<div class="grid md:grid-cols-2 gap-3 mt-4 pt-4 border-t">${butiranList.map(x => kv(x[0], x[1])).join('')}</div>` : ''}`);
+  html += section('Dokumen', `<div class="flex flex-wrap gap-2">
+      ${p.folderUrl ? `<a target="_blank" href="${esc(p.folderUrl)}" class="btn bg-blue-600 text-white text-xs"><i class="fa-solid fa-folder-open"></i> Folder Pemohon</a>` : ''}
+      ${p.pdfUrl ? `<a target="_blank" href="${esc(p.pdfUrl)}" class="btn bg-gray-700 text-white text-xs"><i class="fa-solid fa-file-pdf"></i> Borang Permohonan</a>` : ''}
+      ${(p.lampiran || []).map(a => `<a target="_blank" href="${esc(a.url)}" class="btn bg-white border text-xs"><i class="fa-solid fa-paperclip"></i> ${esc(a.label)}</a>`).join('')}
+      ${kep.filter(x => x['Dokumen URL']).map(x => `<a target="_blank" href="${esc(x['Dokumen URL'])}" class="btn bg-white border text-xs"><i class="fa-solid fa-file-signature"></i> ${esc(x['Peringkat'])}</a>`).join('')}
+      ${g?.['PDF URL'] ? `<a target="_blank" href="${esc(g['PDF URL'])}" class="btn bg-white border text-xs"><i class="fa-solid fa-file-circle-check"></i> Surat Pengesahan</a>` : ''}
+      ${k?.['Resit URL'] ? `<a target="_blank" href="${esc(k['Resit URL'])}" class="btn bg-white border text-xs"><i class="fa-solid fa-receipt"></i> Resit</a>` : ''}
+      ${k?.['Bukti Serahan URL'] ? `<a target="_blank" href="${esc(k['Bukti Serahan URL'])}" class="btn bg-white border text-xs"><i class="fa-solid fa-box"></i> Bukti Serahan</a>` : ''}
+      ${l?.['Fail URL'] ? `<a target="_blank" href="${esc(l['Fail URL'])}" class="btn bg-white border text-xs"><i class="fa-solid fa-file-lines"></i> Laporan</a>` : ''}
+    </div>`);
+  if (s) html += section('Sumbangan Diluluskan', sumbanganHtml(s));
+  if (g) html += section('Pengesahan Pemohon', `<div class="grid md:grid-cols-3 gap-3">${kv('Persetujuan', g['Persetujuan'])}${kv('Tarikh', fmtDate(g['Masa']))}${g['No IBAN'] ? kv('No. IBAN', g['No IBAN']) + kv('Swift Code', g['Swift Code']) : ''}${kv('Nama', g['Nama Pemohon/Organisasi'])}${kv('Jawatan', g['Jawatan'])}${kv('Bank', g['Nama Bank'])}${kv('Nama Akaun', g['Nama Akaun'])}${kv('No Akaun', g['No Akaun'])}${kv('No Pendaftaran', g['No Pendaftaran Organisasi'])}${kv('Alamat Penghantaran', g['Alamat Penghantaran'])}</div>`);
+  if (k) html += section('Kewangan & Saluran', `<div class="grid md:grid-cols-3 gap-3">${k['Tiada Implikasi Kewangan'] === 'Y' ? kv('KEW-04', 'Tiada implikasi kewangan') : kv('Jumlah Diluluskan', rm(k['Jumlah Diluluskan RM'])) + kv('Penerima', k['Penerima Bayaran']) + kv('Bank / Akaun', `${k['Nama Bank']} ${k['No Akaun']}`) + kv('Disahkan', `${k['Disahkan Oleh']} (${fmtDate(k['Tarikh Disahkan'])})`) + kv('Diluluskan', `${k['Diluluskan Oleh']} (${fmtDate(k['Tarikh Diluluskan'])})`)}
+    ${kv('Tarikh Bayaran', fmtDate(k['Tarikh Bayaran']))}${kv('No Transaksi', k['No Rujukan Transaksi'])}${kv('Tarikh Serahan Barang', fmtDate(k['Tarikh Serahan Barang']))}</div>`);
+  if (l) html += section('Laporan Penajaan', `<div class="grid md:grid-cols-3 gap-3">${kv('Tarikh Akhir', fmtDate(l['Tarikh Akhir']))}${kv('Tarikh Terima', fmtDate(l['Tarikh Terima']))}${kv('Peringatan Dihantar', fmtDate(l['Peringatan Dihantar']))}</div>`);
+  html += section('Sejarah Tindakan', kep.length ? `<ol class="relative border-l border-gray-300 ml-2 space-y-4">${kep.map(x => `<li class="ml-4"><div class="absolute w-2.5 h-2.5 bg-emerald-600 rounded-full -left-[5px] mt-1.5"></div>
+      <div class="text-xs text-gray-500">${fmtDate(x['Masa'])} · ${esc(x['Peringkat'])} · ${esc(x['Oleh (Emel)'])}</div>
+      <div class="font-semibold">${esc(x['Keputusan'])}${x['Kaedah Kelulusan'] ? ` <span class="text-xs font-normal">(${esc(x['Kaedah Kelulusan'])}${x['Tarikh Mesyuarat'] ? ', ' + fmtDate(x['Tarikh Mesyuarat']) : ''})</span>` : ''}</div>
+      ${x['Nama'] ? `<div class="text-xs">${esc(x['Nama'])}${x['Jawatan'] ? ' · ' + esc(x['Jawatan']) : ''}</div>` : ''}
+      ${x['Catatan'] ? `<div class="text-xs bg-gray-50 border rounded p-2 mt-1 whitespace-pre-wrap">${esc(x['Catatan'])}</div>` : ''}</li>`).join('')}</ol>` : '<p class="text-gray-500">Belum ada tindakan.</p>');
+  $('d-body').innerHTML = html;
+
+  // Butang tindakan ikut status + peranan
+  const A = [];
+  const b = (label, icon, fn, color = 'bg-emerald-600 hover:bg-emerald-700') => A.push(`<button class="btn ${color} text-white" onclick="${fn}"><i class="fa-solid ${icon}"></i> ${label}</button>`);
+  const r = esc(ref);
+  if (['BARU','SEMAKAN_SEMULA'].includes(p.status) && hasRole('ADMIN')) b('Saringan', 'fa-magnifying-glass', `actSaringan('${r}')`);
+  if (p.status === 'MESYUARAT' && hasRole('MESYUARAT','ADMIN')) b('Rekod Keputusan Mesyuarat', 'fa-people-group', `actMesyuarat('${r}')`);
+  if (p.status === 'TUNGGU_PENGARAH' && hasRole('PENGARAH')) b('Tandatangan Surat Maklum Balas', 'fa-signature', `actSurat('${r}')`);
+  if (p.status === 'TUNGGU_PENGESAHAN' && hasRole('ADMIN')) b('Salin Pautan Pengesahan', 'fa-link', `copyLink('${r}')`, 'bg-teal-600 hover:bg-teal-700');
+  if (p.status === 'TUNGGU_KEWANGAN' && hasRole('KEWANGAN')) b('Proses Borang Kewangan', 'fa-file-invoice-dollar', `actKewangan('${r}')`, 'bg-blue-600 hover:bg-blue-700');
+  if (p.status === 'TUNGGU_BAYARAN' && hasRole('KEWANGAN','ADMIN')) b('Rekod Bayaran / Penyerahan', 'fa-money-check-dollar', `actBayaran('${r}')`, 'bg-blue-600 hover:bg-blue-700');
+  if (p.status === 'TUNGGU_LAPORAN' && hasRole('ADMIN')) { b('Terima Laporan', 'fa-file-circle-check', `actLaporan('${r}')`); b('Ubah Tarikh Akhir', 'fa-calendar', `actTarikhLaporan('${r}')`, 'bg-gray-600 hover:bg-gray-700'); }
+  if (ME.peranan.includes('SUPERADMIN')) b('Tukar Status (Override)', 'fa-screwdriver-wrench', `actOverride('${r}')`, 'bg-red-700 hover:bg-red-800');
+  $('d-actions').innerHTML = A.join('') || '<span class="text-xs text-gray-500">Tiada tindakan untuk peranan anda pada status ini.</span>';
+  openModal('modal-detail');
+  $('modal-detail').scrollTop = 0;
+}
+
+function copyLink(ref) {
+  const p = getP(ref);
+  toast('Pautan pengesahan dihantar dalam e-mel kelulusan. Token tidak dipaparkan di panel atas sebab keselamatan; minta pemohon semak e-mel (termasuk folder Spam).', 'info');
+}
+
+function refreshAfter(ref, msg) {
+  toast(msg); closeModal('modal-action'); closeModal('modal-detail');
+  loadData().then(() => { if (ref && getP(ref)) openDetail(ref); });
+}
+
+/* ---------------- 1. SARINGAN ---------------- */
+function actSaringan(ref) {
+  const p = getP(ref);
+  $('a-title').textContent = 'Saringan Dokumen · ' + ref;
+  $('a-body').innerHTML = `
+    ${p.berulang.length ? `<div class="bg-red-50 border border-red-300 text-red-800 rounded p-3 text-xs font-semibold"><i class="fa-solid fa-triangle-exclamation"></i> Pemohon ini ada ${p.berulang.length} padanan permohonan lain dalam ${esc(DB.umum.BULAN_SEMAK_BERULANG)} bulan. Sila semak sebelum hantar ke mesyuarat.</div>` : ''}
+    <div><label class="lbl">Pegawai Bertanggungjawab (PIC)</label><input id="s-pic" class="inp uppercase" value="${esc(p.pic || '')}"></div>
+    <div><label class="lbl">Tindakan</label>
+      <label class="flex items-center gap-2 mb-1"><input type="radio" name="s-t" value="HANTAR_MESYUARAT" checked> <b class="text-emerald-700">Dokumen lengkap – hantar ke Mesyuarat</b></label>
+      <label class="flex items-center gap-2"><input type="radio" name="s-t" value="MINTA_DOKUMEN"> <b class="text-orange-700">Tidak lengkap – minta dokumen tambahan (Semakan Semula)</b></label></div>
+    <div><label class="lbl">Catatan / Senarai dokumen yang diperlukan</label><textarea id="s-catatan" rows="4" class="inp"></textarea></div>
+    <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="s-emel" checked> E-melkan catatan kepada pemohon (untuk Semakan Semula)</label>`;
+  $('a-actions').innerHTML = `<button class="btn bg-gray-200" onclick="doSaringan('${esc(ref)}','SIMPAN_PIC')">Simpan PIC sahaja</button><button class="btn bg-emerald-600 text-white" onclick="doSaringan('${esc(ref)}')">Hantar</button>`;
+  openModal('modal-action');
+}
+async function doSaringan(ref, force) {
+  const tindakan = force || document.querySelector('input[name="s-t"]:checked').value;
+  loading(true);
+  try { await api('saringan', { refNo: ref, tindakan, pic: $('s-pic').value, catatan: $('s-catatan').value.trim(), emelPemohon: $('s-emel').checked }); refreshAfter(ref, 'Saringan disimpan.'); }
+  catch (err) { toast(err.message, 'err'); } finally { loading(false); }
+}
+
+/* ---------------- 2. MESYUARAT ---------------- */
+function actMesyuarat(ref) {
+  const p = getP(ref);
+  $('a-title').textContent = 'Keputusan Mesyuarat · ' + ref;
+  $('a-body').innerHTML = `
+    ${p.berulang.length ? `<div class="bg-red-50 border border-red-300 text-red-800 rounded p-3 text-xs font-semibold"><i class="fa-solid fa-triangle-exclamation"></i> Pemohon berulang: ${esc(p.berulang.map(b => b.refNo + ' (' + b.status + ')').join('; '))}</div>` : ''}
+    <div>
+      <label class="lbl text-sm">1. Keputusan *</label>
+      <div class="flex flex-wrap gap-4">
+        <label class="flex items-center gap-2"><input type="radio" name="m-k" value="LULUS" onchange="toggleMesy()"> <b class="text-emerald-700">LULUS</b></label>
+        <label class="flex items-center gap-2"><input type="radio" name="m-k" value="TIDAK_LULUS" onchange="toggleMesy()"> <b class="text-red-700">TIDAK LULUS</b></label>
+        <label class="flex items-center gap-2"><input type="radio" name="m-k" value="SEMAKAN_SEMULA" onchange="toggleMesy()"> <b class="text-orange-600">SEMAKAN SEMULA</b></label>
+      </div>
+    </div>
+    <div class="grid md:grid-cols-2 gap-3">
+      <div><label class="lbl">Kaedah Kelulusan *</label><select id="m-kaedah" class="inp">${KAEDAH_KELULUSAN.map(k => `<option>${k}</option>`).join('')}</select></div>
+      <div><label class="lbl">Tarikh Mesyuarat / Kelulusan *</label><input id="m-tarikhm" type="date" class="inp" value="${todayISO()}"></div>
+    </div>
+    <div><label class="lbl text-sm">2. Nota / Catatan Mesyuarat</label><textarea id="m-catatan" rows="4" class="inp" placeholder="Rumusan perbincangan, syarat tambahan, sebab keputusan..."></textarea>
+      <label class="flex items-center gap-2 text-xs mt-2 hidden" id="m-emel-wrap"><input type="checkbox" id="m-emel" checked> E-melkan catatan kepada pemohon (Semakan Semula)</label></div>
+    <div id="m-sumbangan" class="hidden space-y-3 border-t pt-4">
+      <label class="lbl text-sm">3. Bentuk Sumbangan / Tajaan *</label>
+      <div class="grid md:grid-cols-2 gap-2">
+        ${Object.entries(DB.bentukLabels).map(([k, v]) => `<label class="flex items-center gap-2 border rounded p-2"><input type="radio" name="m-b" value="${k}" onchange="toggleMesy()"> <b class="text-xs">${esc(v)}</b></label>`).join('')}
+      </div>
+      <div id="m-wang" class="hidden grid md:grid-cols-2 gap-3"><div><label class="lbl">Jumlah Wang (RM) *</label><input id="m-rm" type="number" min="0" step="0.01" class="inp"></div></div>
+      <div id="m-pembekal" class="hidden grid md:grid-cols-2 gap-3 bg-blue-50 p-3 rounded">
+        <div class="md:col-span-2 text-xs font-bold text-blue-900">Maklumat Pembekal</div>
+        <div><label class="lbl">Nama Pembekal *</label><input id="m-pb-nama" class="inp uppercase"></div>
+        <div><label class="lbl">No. Sebut Harga / Invois</label><input id="m-pb-inv" class="inp uppercase"></div>
+        <div><label class="lbl">Bank Pembekal</label><input id="m-pb-bank" class="inp uppercase"></div>
+        <div><label class="lbl">No. Akaun Pembekal</label><input id="m-pb-akaun" class="inp"></div>
+      </div>
+      <div id="m-barang" class="hidden">
+        <div class="flex justify-between items-center mb-1"><span class="lbl !mb-0">Senarai Barangan *</span><button type="button" class="text-xs text-blue-700 font-semibold" onclick="addBarangRow()"><i class="fa-solid fa-plus"></i> Tambah barang</button></div>
+        <table class="w-full text-xs"><thead><tr class="text-left text-gray-500"><th class="py-1">Nama Barang</th><th class="w-20">Kuantiti</th><th class="w-20">Unit</th><th class="w-28">Harga Seunit (RM)</th><th class="w-6"></th></tr></thead><tbody id="m-barang-rows"></tbody></table>
+        <p class="text-[11px] text-gray-500 mt-1">Harga seunit digunakan untuk kira nilai perolehan dalam MCM-KEW-04. Biarkan kosong jika barang dari stok sedia ada.</p>
+      </div>
+      <div><label class="lbl">Untuk Tujuan *</label><input id="m-tujuan" class="inp uppercase" value="${esc(p.jenisBantuan ? 'BANTUAN ' + p.jenisBantuan : '')}"></div>
+    </div>`;
+  $('a-actions').innerHTML = `<button class="btn bg-emerald-600 text-white" onclick="doMesyuarat('${esc(ref)}')"><i class="fa-solid fa-floppy-disk"></i> Simpan Keputusan</button>`;
+  // Auto tarik barang dari jenis bantuan (borang gajet)
+  if (p.kodBorang == '2.13' && p.jenisBantuan) addBarangRow({ nama: p.jenisBantuan, kuantiti: 1, unit: 'UNIT' }); else addBarangRow();
+  openModal('modal-action');
+}
+function addBarangRow(v = {}) {
+  const tr = document.createElement('tr');
+  tr.innerHTML = `<td class="pr-1 py-1"><input class="inp uppercase b-nama" value="${esc(v.nama || '')}"></td><td class="pr-1"><input type="number" min="1" class="inp b-qty" value="${esc(v.kuantiti || '')}"></td><td class="pr-1"><input class="inp uppercase b-unit" value="${esc(v.unit || 'UNIT')}"></td><td class="pr-1"><input type="number" min="0" step="0.01" class="inp b-harga" value="${esc(v.hargaSeunit || '')}"></td><td><button type="button" class="text-red-600" onclick="this.closest('tr').remove()"><i class="fa-solid fa-trash"></i></button></td>`;
+  $('m-barang-rows').appendChild(tr);
+}
+function toggleMesy() {
+  const k = document.querySelector('input[name="m-k"]:checked')?.value;
+  const bentuk = document.querySelector('input[name="m-b"]:checked')?.value;
+  $('m-sumbangan').classList.toggle('hidden', k !== 'LULUS');
+  $('m-emel-wrap').classList.toggle('hidden', k !== 'SEMAKAN_SEMULA');
+  $('m-wang').classList.toggle('hidden', !['WANG','WANG_BARANGAN','BAYARAN_PEMBEKAL'].includes(bentuk));
+  $('m-barang').classList.toggle('hidden', !['BARANGAN','WANG_BARANGAN'].includes(bentuk));
+  $('m-pembekal').classList.toggle('hidden', bentuk !== 'BAYARAN_PEMBEKAL');
+}
+async function doMesyuarat(ref) {
+  const keputusan = document.querySelector('input[name="m-k"]:checked')?.value;
+  if (!keputusan) return toast('Sila pilih keputusan.', 'err');
+  const bentuk = document.querySelector('input[name="m-b"]:checked')?.value;
+  const payload = { refNo: ref, keputusan, kaedah: $('m-kaedah').value, tarikhMesyuarat: $('m-tarikhm').value, catatan: $('m-catatan').value.trim(), emelPemohon: $('m-emel').checked };
+  if (keputusan === 'LULUS') {
+    const useBarang = ['BARANGAN','WANG_BARANGAN'].includes(bentuk);
+    payload.sumbangan = {
+      bentuk, tujuan: $('m-tujuan').value,
+      jumlahWang: ['WANG','WANG_BARANGAN','BAYARAN_PEMBEKAL'].includes(bentuk) ? $('m-rm').value : '',
+      barangan: useBarang ? [...document.querySelectorAll('#m-barang-rows tr')].map(tr => ({ nama: tr.querySelector('.b-nama').value, kuantiti: tr.querySelector('.b-qty').value, unit: tr.querySelector('.b-unit').value, hargaSeunit: tr.querySelector('.b-harga').value })) : [],
+      pembekalNama: $('m-pb-nama').value, pembekalBank: $('m-pb-bank').value, pembekalNoAkaun: $('m-pb-akaun').value, pembekalInvois: $('m-pb-inv').value
+    };
+  }
+  loading(true);
+  try { await api('rekodMesyuarat', payload); refreshAfter(ref, 'Keputusan mesyuarat disimpan.'); }
+  catch (err) { toast(err.message, 'err'); } finally { loading(false); }
+}
+
+/* ---------------- 3. SURAT MAKLUM BALAS ---------------- */
+function lastMesy(ref) { return (DB.keputusan[ref] || []).filter(x => x['Peringkat'] === 'MESYUARAT').pop(); }
+
+function actSurat(ref) {
+  const p = getP(ref), s = DB.sumbangan[ref], km = lastMesy(ref);
+  const lulus = km?.['Keputusan'] === 'LULUS';
+  const signers = DB.pegawai.filter(x => x['Tandatangan Surat (Y/N)'] === 'Y' && x['Aktif (Y/N)'] === 'Y');
+  $('a-title').textContent = 'Tandatangan Surat Maklum Balas · ' + ref;
+  $('a-body').innerHTML = `
+    <div class="rounded-lg p-4 ${lulus ? 'bg-emerald-50 border border-emerald-200' : 'bg-red-50 border border-red-200'}">
+      <div class="text-xs uppercase font-bold text-gray-500">Keputusan Mesyuarat</div>
+      <div class="text-lg font-extrabold ${lulus ? 'text-emerald-700' : 'text-red-700'}">${esc(km?.['Keputusan'] || '-')}</div>
+      <div class="text-xs">${esc(km?.['Kaedah Kelulusan'] || '')} · ${fmtDate(km?.['Tarikh Mesyuarat'])}</div>
+      ${km?.['Catatan'] ? `<div class="text-xs mt-2 whitespace-pre-wrap">${esc(km['Catatan'])}</div>` : ''}
+    </div>
+    ${lulus ? section('Sumbangan', sumbanganHtml(s)) : ''}
+    <div class="grid md:grid-cols-3 gap-3">
+      <div class="md:col-span-3 text-xs font-bold text-gray-600 uppercase">Penerima Surat</div>
+      <div><label class="lbl">Nama</label><input id="sr-nama" class="inp uppercase" value="${esc(p.nama)}"></div>
+      <div><label class="lbl">Jawatan</label><input id="sr-jawatan" class="inp uppercase" value="${p.kodBorang == '2.13' ? 'PEMOHON' : ''}"></div>
+      <div><label class="lbl">Alamat</label><input id="sr-alamat" class="inp uppercase" value="${esc(p.alamat || '')}"></div>
+    </div>
+    <div class="grid md:grid-cols-2 gap-3">
+      <div><label class="lbl">Pegawai Penandatangan *</label><select id="sr-pegawai" class="inp" onchange="pilihSigner()">
+        <option value="">-- Pilih --</option>${signers.map((x, i) => `<option value="${i}">${esc(x['Nama'])} (${esc(x['Jawatan'])})</option>`).join('')}<option value="lain">Lain-lain (taip sendiri)</option></select>
+        <p class="text-[11px] text-gray-500 mt-1">Senarai ini diurus di Tetapan › Pegawai.</p></div>
+      <div class="grid grid-cols-2 gap-2"><div><label class="lbl">Nama</label><input id="sr-pnama" class="inp uppercase" readonly></div><div><label class="lbl">Jawatan</label><input id="sr-pjawatan" class="inp uppercase" readonly></div></div>
+    </div>
+    ${sigBlock('pad-surat', 'Tandatangan Pegawai *')}
+    <p class="text-xs text-gray-600 bg-gray-50 border rounded p-3">${lulus ? 'Selepas ditandatangani, pemohon akan menerima e-mel berserta <b>Surat Maklum Balas</b>, <b>Borang 13 Laporan Penajaan</b> dan pautan <b>Surat Pengesahan & Penerimaan</b>.' : 'Pemohon akan menerima e-mel berserta Surat Maklum Balas (Tidak Diluluskan).'}</p>`;
+  window._signers = signers;
+  $('a-actions').innerHTML = `
+    <button class="btn bg-orange-100 text-orange-800" onclick="actKembali('${esc(ref)}')"><i class="fa-solid fa-rotate-left"></i> Kembalikan ke Mesyuarat</button>
+    <button class="btn bg-gray-200" onclick="doSurat('${esc(ref)}', true)"><i class="fa-solid fa-eye"></i> Pratonton PDF</button>
+    <button class="btn bg-emerald-600 text-white" onclick="doSurat('${esc(ref)}')"><i class="fa-solid fa-paper-plane"></i> Tandatangan & E-mel</button>`;
+  openModal('modal-action');
+  requestAnimationFrame(() => makePad('pad-surat'));
+}
+function pilihSigner() {
+  const v = $('sr-pegawai').value;
+  const lain = v === 'lain';
+  $('sr-pnama').readOnly = !lain; $('sr-pjawatan').readOnly = !lain;
+  if (lain) { $('sr-pnama').value = ''; $('sr-pjawatan').value = ''; $('sr-pnama').focus(); return; }
+  const x = window._signers[v];
+  $('sr-pnama').value = x ? x['Nama'] : ''; $('sr-pjawatan').value = x ? x['Jawatan'] : '';
+}
+
+function suratHtml(ref, o) {
+  const p = getP(ref), s = DB.sumbangan[ref] || {}, U = DB.umum;
+  const lulus = o.lulus, bentuk = s['Bentuk'];
+  const tick = c => `<span class="box">${c ? '✓' : ''}</span>`;
+  const brg = parseBarang(s);
+  const now = new Date();
+  const wangLine = lulus && ['WANG','WANG_BARANGAN'].includes(bentuk);
+  const pbLine = lulus && bentuk === 'BAYARAN_PEMBEKAL';
+  const brgLine = lulus && ['BARANGAN','WANG_BARANGAN'].includes(bentuk);
+  const ul = (t, w) => `<span style="display:inline-block;min-width:${w}px;border-bottom:1px solid #000;text-align:center;padding:0 6px;font-weight:bold">${esc(t)}</span>`;
+  const header = small => `<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:${small ? 16 : 24}px">
+      <img src="${LOGO}" crossorigin="anonymous" style="height:${small ? 44 : 64}px">
+      <div style="text-align:right"><div style="font-weight:bold;font-size:${small ? 11 : 13}px">MAKLUM BALAS PERMOHONAN SUMBANGAN</div><div style="font-size:${small ? 10 : 12}px">MUSLIM CARE MALAYSIA SOCIETY</div><div style="font-size:10px">Bil. Pindaan : ${BIL_PINDAAN_SURAT}</div>
+      ${small ? '' : `<table style="margin-left:auto;margin-top:12px;font-size:12px;text-align:left"><tr><td style="padding-right:12px">Rujukan Kami</td><td>: <b>${esc(ref)}</b></td></tr><tr><td>Tarikh</td><td>: ${fmtDate(now)}</td></tr><tr><td>Bersamaan</td><td>: ${esc(hijri(now))}</td></tr></table>`}</div></div>`;
+  return `<div class="a4">
+    ${header(false)}
+    <table style="font-size:12px;margin-bottom:14px"><tr><td style="width:70px">Nama</td><td>: <b>${esc(o.penerimaNama)}</b></td></tr><tr><td>Jawatan</td><td>: ${esc(o.penerimaJawatan || '-')}</td></tr><tr><td style="vertical-align:top">Alamat</td><td>: ${esc(o.penerimaAlamat || '-')}</td></tr></table>
+    <p>Tuan/puan,</p>
+    <p style="font-weight:bold;margin:10px 0">MAKLUM BALAS PENERIMAAN/PENOLAKAN PERMOHONAN TAJAAN DAN SUMBANGAN DARIPADA MUSLIM CARE MALAYSIA</p>
+    <p style="text-align:justify">Adalah dimaklumkan bahawa <i>Muslim Care Malaysia (MCM)</i> dengan ini memaklumkan bahawa permohonan pihak tuan/puan;</p>
+    <div style="margin:8px 0 8px 20px"><div>${tick(lulus)}<b>DILULUSKAN</b></div><div>${tick(!lulus)}<b>TIDAK DILULUSKAN</b></div></div>
+    <p>Untuk memberikan sumbangan/tajaan dalam bentuk;</p>
+    <div style="margin:8px 0 8px 20px;line-height:2">
+      <div>${tick(wangLine)}<b>WANG</b> berjumlah ${ul(wangLine ? rm(s['Jumlah Wang RM']) : '', 220)}</div>
+      <div>${tick(pbLine)}<b>BAYARAN TERUS KEPADA PEMBEKAL</b> berjumlah ${ul(pbLine ? rm(s['Jumlah Wang RM']) + (s['Pembekal Nama'] ? ' (' + s['Pembekal Nama'] + ')' : '') : '', 220)}</div>
+      <div>${tick(brgLine)}<b>BARANGAN</b> ${ul(brgLine ? brg.map(b => b.nama).join(', ') : '', 200)} dengan kuantiti sebanyak ${ul(brgLine ? brg.map(b => b.kuantiti + ' ' + b.unit).join(', ') : '', 110)}</div>
+    </div>
+    <p style="text-align:justify">kepada pihak tuan/puan untuk tujuan ${ul(lulus ? s['Tujuan'] || '' : '', 420)}</p>
+    <p style="text-align:justify;margin-top:12px">2.&nbsp;&nbsp;&nbsp;Sumbangan ini akan disalurkan ke dalam akaun peribadi/pertubuhan/pembekal setelah MCM menerima Kembali Salinan <b>SURAT PENGESAHAN DAN PENERIMAAN SUMBANGAN</b> yang telah ditandatangani oleh pihak tuan/puan.</p>
+    <p style="text-align:justify;margin-top:10px">3.&nbsp;&nbsp;&nbsp;(Jika berkenaan) Pihak <i>MCM</i> berharap pihak tuan/puan mematuhi <i>standard operation procedure</i> (SOP) yang telah ditetapkan oleh pihak berkuasa tempatan serta memastikan setiap panitia dan peserta sentiasa menjaga nama baik <i>MCM</i>.</p>
+    <p style="text-align:justify;margin-top:10px">4.&nbsp;&nbsp;&nbsp;(Jika berkenaan) Pihak tuan/puan mestilah mengemukakan laporan berhubung aktiviti yang dijalankan dalam tempoh <b>14 hari (2 minggu)</b> selepas tamat program menggunakan <b>BORANG 13: LAPORAN PENAJAAN PROGRAM</b> yang disediakan.</p>
+    <div class="html2pdf__page-break"></div>
+    <div style="padding-top:36px">${header(true)}</div>
+    <p style="text-align:justify">Adalah dimaklumkan bahawa semua penerbitan, pengiklanan, bahan promosi atau pengumuman awam yang melibatkan nama atau logo <i>MCM</i> berkaitan dengan sumbangan ini mestilah mendapat kelulusan daripada pihak <i>MCM</i> terlebih dahulu sebelum diterbitkan.</p>
+    <p style="text-align:justify;margin-top:10px">5.&nbsp;&nbsp;&nbsp;Pihak pemohon diminta untuk <b><i>like, share</i></b> dan <b><i>follow</i></b> media sosial <i>Muslim Care Malaysia Society</i> serta melampirkan gambar tangkapan skrin <i>(screenshot)</i> dalam <b>BORANG 13: LAPORAN PENAJAAN PROGRAM</b>.</p>
+    <p style="text-align:justify;margin-top:10px">6.&nbsp;&nbsp;&nbsp;Pihak pemohon mestilah menjadi rakan strategik <i>Muslim Care Malaysia</i> dan menyalurkan sebahagian kutipan sumbangan Bantuan Kemanusiaan bagi negara-negara yang menjadi lokasi penerima bantuan <i>MCM</i> seperti Palestin, Syria, dan Yaman.</p>
+    <p style="text-align:justify;margin-top:10px">7.&nbsp;&nbsp;&nbsp;Pihak Institusi Pengajian Tinggi (IPT) yang mendapat tajaan atau bantuan daripada <i>Muslim Care Malaysia</i> hendaklah bersetuju untuk menjalinkan kerjasama serta memberi keutamaan kepada <i>MCM</i> dalam melaksanakan program berkaitan Palestin dan Syria di kampus masing-masing.</p>
+    <p style="text-align:justify;margin-top:10px">8.&nbsp;&nbsp;&nbsp;Sekiranya pihak tuan/puan memerlukan maklumat lanjut, sila hubungi Pejabat <i>Muslim Care Malaysia</i> di talian ${esc(U.TELEFON_PEJABAT)} atau melalui Bahagian Pentadbiran (admin) di talian ${esc(U.TELEFON_ADMIN)} serta e-mel ke ${esc(U.EMEL_RASMI)}.</p>
+    <p style="text-align:justify;margin-top:14px">Kami berharap semoga usaha murni pihak tuan/puan dalam merealisasikan program ini serta mendapat kejayaan dan dinilai sebagai ibadah oleh Allah <i>Subhanahu Wataala</i>.</p>
+    <p style="text-align:center;font-weight:bold;margin:18px 0">‘Bantuan Kemanusiaan Merentasi Sempadan’</p>
+    <p>Terima kasih.</p><p>Yang Benar,</p>
+    <div style="height:80px;width:220px;display:flex;align-items:flex-end">${o.sig ? `<img src="${o.sig}" style="max-height:80px;max-width:220px">` : ''}</div>
+    <div style="border-top:1px solid #000;width:240px;padding-top:4px"><b>${esc(o.pegawaiNama)}</b><br>${esc(o.pegawaiJawatan)}<br>MUSLIM CARE MALAYSIA</div>
+  </div>`;
+}
+
+async function doSurat(ref, previewOnly = false) {
+  const km = lastMesy(ref);
+  const o = { lulus: km?.['Keputusan'] === 'LULUS', penerimaNama: $('sr-nama').value.toUpperCase(), penerimaJawatan: $('sr-jawatan').value.toUpperCase(), penerimaAlamat: $('sr-alamat').value.toUpperCase(), pegawaiNama: $('sr-pnama').value.toUpperCase(), pegawaiJawatan: $('sr-pjawatan').value.toUpperCase() };
+  if (!o.pegawaiNama || !o.pegawaiJawatan) return toast('Sila pilih pegawai penandatangan.', 'err');
+  const pad = pads['pad-surat'];
+  if (!previewOnly && (!pad || pad.isEmpty())) return toast('Sila turunkan tandatangan.', 'err');
+  o.sig = pad && !pad.isEmpty() ? pad.toDataURL('image/png') : '';
+  loading(true, previewOnly ? 'Menjana pratonton...' : 'Menjana surat & menghantar e-mel...');
+  try {
+    const html = suratHtml(ref, o);
+    const fname = `Surat_Maklum_Balas_${ref.replace(/\//g, '-')}.pdf`;
+    if (previewOnly) { await previewPdf(html, fname); return; }
+    const pdfBase64 = await makePdf(html, fname);
+    const r = await api('tandatanganSurat', { refNo: ref, pegawaiNama: o.pegawaiNama, pegawaiJawatan: o.pegawaiJawatan, pdfBase64 });
+    refreshAfter(ref, r.emelOk ? 'Surat ditandatangani & e-mel dihantar kepada pemohon.' : 'Surat disimpan, TETAPI e-mel gagal dihantar (kuota?). Sila maklumkan pemohon secara manual.');
+  } catch (err) { toast(err.message, 'err'); } finally { loading(false); $('pdf-stage').innerHTML = ''; }
+}
+
+function actKembali(ref) {
+  const c = prompt('Nyatakan sebab dikembalikan ke mesyuarat:');
+  if (!c) return;
+  loading(true);
+  api('kembaliMesyuarat', { refNo: ref, catatan: c }).then(() => refreshAfter(ref, 'Dikembalikan ke mesyuarat.')).catch(err => toast(err.message, 'err')).finally(() => loading(false));
+}
+
+/* ---------------- 4. KEWANGAN (KEW-04) ---------------- */
+function actKewangan(ref) {
+  const p = getP(ref), s = DB.sumbangan[ref] || {}, g = DB.pengesahan[ref] || {};
+  const bentuk = s['Bentuk'];
+  const brg = parseBarang(s);
+  const nilaiBrg = Number(s['Nilai Barangan RM'] || 0);
+  // Auto tarik penerima & amaun
+  let penerima = p.nama, bank = g['Nama Bank'] || '', akaun = g['No Akaun'] || (g['No IBAN'] ? 'IBAN ' + g['No IBAN'] + (g['Swift Code'] ? ' / SWIFT ' + g['Swift Code'] : '') : ''), namaAkaun = g['Nama Akaun'] || '', jumlah = Number(s['Jumlah Wang RM'] || 0);
+  if (bentuk === 'BAYARAN_PEMBEKAL') { penerima = s['Pembekal Nama']; bank = s['Pembekal Bank']; akaun = s['Pembekal No Akaun']; namaAkaun = s['Pembekal Nama']; }
+  if (bentuk === 'BARANGAN') { penerima = ''; bank = ''; akaun = ''; namaAkaun = ''; jumlah = nilaiBrg; }
+  const sahList = DB.pegawai.filter(x => x['Sahkan KEW-04 (Y/N)'] === 'Y' && x['Aktif (Y/N)'] === 'Y');
+  const lulusList = DB.pegawai.filter(x => x['Luluskan KEW-04 (Y/N)'] === 'Y' && x['Aktif (Y/N)'] === 'Y');
+  const opt = list => `<option value="">-- Pilih --</option>` + list.map(x => `<option>${esc(x['Nama'])}</option>`).join('');
+
+  $('a-title').textContent = (DB.umum.KOD_BORANG_KEWANGAN || 'MCM-KEW-04') + ' · ' + ref;
+  $('a-body').innerHTML = `
+    ${section('Sumbangan Diluluskan (auto)', sumbanganHtml(s))}
+    ${bentuk === 'WANG_BARANGAN' && nilaiBrg ? `<div class="bg-amber-50 border border-amber-200 text-amber-900 text-xs p-3 rounded">Bentuk WANG DAN BARANGAN: KEW-04 ini untuk bayaran wang kepada pemohon. Nilai perolehan barangan (${rm(nilaiBrg)}) perlu diproses berasingan jika dibeli daripada pembekal.</div>` : ''}
+    ${['BARANGAN','WANG_BARANGAN'].includes(bentuk) ? `<label class="flex items-center gap-2 font-semibold"><input type="checkbox" id="k-tiada" onchange="$('k-form').classList.toggle('hidden', this.checked)"> Tiada implikasi kewangan (barang dari stok sedia ada) – langkau KEW-04</label>` : ''}
+    <div id="k-form" class="space-y-4">
+      <div class="grid md:grid-cols-2 gap-3">
+        <div><label class="lbl">Nama Program / Projek</label><input id="k-prog" class="inp uppercase" value="${esc(p.namaBorang + (p.jenisBantuan ? ' - ' + p.jenisBantuan : ''))}"></div>
+        <div><label class="lbl">Anggaran Penerima Manfaat</label><input id="k-manfaat" class="inp uppercase" value="1 ORANG"></div>
+        <div class="md:col-span-2"><label class="lbl">Ringkasan Program / Projek</label><input id="k-ringkasan" class="inp uppercase" value="${esc(s['Tujuan'] || '')}${brg.length ? esc(' (' + brg.map(b => b.nama + ' x' + b.kuantiti).join(', ') + ')') : ''}"></div>
+        <div><label class="lbl">Jumlah Diluluskan (RM) *</label><input id="k-rm" type="number" step="0.01" class="inp font-bold" value="${jumlah || ''}"></div>
+        <div><label class="lbl">Penerima Bayaran *</label><input id="k-penerima" class="inp uppercase" value="${esc(penerima || '')}" placeholder="${bentuk === 'BARANGAN' ? 'Nama pembekal barangan' : ''}"></div>
+        <div><label class="lbl">Nama Bank *</label><input id="k-bank" class="inp uppercase" value="${esc(bank || '')}"></div>
+        <div><label class="lbl">No. Akaun *</label><input id="k-akaun" class="inp" value="${esc(akaun || '')}"></div>
+        <div><label class="lbl">Penama Akaun *</label><input id="k-namaakaun" class="inp uppercase" value="${esc(namaAkaun || '')}"></div>
+      </div>
+      <div class="grid md:grid-cols-2 gap-4">
+        <div class="border rounded p-3 bg-gray-50 space-y-2"><div class="font-bold text-xs uppercase text-center">Disahkan Oleh</div>
+          <select id="k-sah" class="inp">${opt(sahList)}</select><input id="k-sah-t" type="date" class="inp" value="${todayISO()}">${sigBlock('pad-sah', 'Tandatangan')}</div>
+        <div class="border rounded p-3 bg-gray-50 space-y-2"><div class="font-bold text-xs uppercase text-center">Diluluskan Oleh</div>
+          <select id="k-lulus" class="inp">${opt(lulusList)}</select><input id="k-lulus-t" type="date" class="inp" value="${todayISO()}">${sigBlock('pad-lulus', 'Tandatangan')}</div>
+      </div>
+    </div>`;
+  $('a-actions').innerHTML = `<button class="btn bg-orange-100 text-orange-800" onclick="actKembali('${esc(ref)}')"><i class="fa-solid fa-rotate-left"></i> Kembalikan ke Mesyuarat</button>
+    <button class="btn bg-gray-200" onclick="doKewangan('${esc(ref)}', true)"><i class="fa-solid fa-eye"></i> Pratonton</button>
+    <button class="btn bg-blue-600 text-white" onclick="doKewangan('${esc(ref)}')"><i class="fa-solid fa-paper-plane"></i> Luluskan & E-mel Kewangan</button>`;
+  openModal('modal-action');
+  requestAnimationFrame(() => { makePad('pad-sah'); makePad('pad-lulus'); });
+}
+
+function kewHtml(ref, o) {
+  const p = getP(ref);
+  const row = (n, label, val, rs) => `<tr>${n !== null ? `<td ${rs ? `rowspan="${rs}"` : ''} style="width:5%;text-align:center;font-weight:bold">${n}</td>` : ''}<td class="kl" style="width:35%">${label}</td><td>${val}</td></tr>`;
+  const sigCell = s => `<td style="height:90px;text-align:center">${s ? `<img src="${s}" style="max-height:80px;max-width:90%">` : ''}</td>`;
+  return `<div class="a4">
+    <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #000;padding-bottom:8px;margin-bottom:18px">
+      <img src="${LOGO}" crossorigin="anonymous" style="height:56px"><div style="font-weight:bold;font-size:17px">PERMOHONAN PERUNTUKAN DANA</div><div style="font-weight:bold;font-style:italic">${esc(DB.umum.KOD_BORANG_KEWANGAN || 'MCM-KEW-04')}</div></div>
+    <table class="k">
+      <tr><td class="kl" colspan="2">Nama Pemohon / Agensi *</td><td><b>${esc(o.penerima)}</b></td></tr>
+      <tr><td class="kl" colspan="2">No Kad Pengenalan / No. Pendaftaran Agensi *</td><td>${esc(o.penerima === p.nama ? p.ic : '-')}</td></tr>
+      <tr><td class="kl" colspan="2">Nama Program / Projek *</td><td><b>${esc(o.prog)}</b></td></tr>
+      <tr><td style="text-align:center;font-weight:bold">1</td><td class="kl">Ringkasan Program / Projek *</td><td style="height:60px;vertical-align:top">${esc(o.ringkasan)}<br><span style="font-size:11px">Rujukan: ${esc(ref)}</span></td></tr>
+      <tr><td style="text-align:center;font-weight:bold">2</td><td class="kl">Anggaran Penerima Manfaat *</td><td>${esc(o.manfaat)}</td></tr>
+      <tr><td style="text-align:center;font-weight:bold">3</td><td class="kl">Jumlah Permohonan Peruntukan Dana *</td><td><b>${rm(o.jumlah)}</b></td></tr>
+      <tr><td rowspan="3" style="text-align:center;font-weight:bold">4</td><td class="kl">Maklumat Akaun Bank * — No. Akaun</td><td><b>${esc(o.akaun)}</b></td></tr>
+      <tr><td class="kl">Nama Bank</td><td>${esc(o.bank)}</td></tr>
+      <tr><td class="kl">Penama</td><td>${esc(o.namaAkaun)}</td></tr>
+    </table>
+    <p style="font-size:10px;font-style:italic;margin:6px 0 16px">Nota : Maklumat pemohon diambil daripada pangkalan data sistem MCM (Surat Pengesahan & Penerimaan pemohon disimpan dalam folder rujukan).</p>
+    <hr style="border-top:1px dashed #000;margin-bottom:10px">
+    <p style="font-size:11px;font-style:italic">Untuk kegunaan pejabat Muslim Care Malaysia Society</p>
+    <p style="margin:10px 0 14px">Permohonan peruntukan berjumlah RM : <span style="display:inline-block;border:1px solid #000;padding:2px 24px;font-weight:bold">${Number(o.jumlah).toFixed(2)}</span> adalah diluluskan.</p>
+    <table class="k"><tr style="background:#d1d5db"><td style="text-align:center;font-weight:bold;width:50%">DISAHKAN OLEH,</td><td style="text-align:center;font-weight:bold">DILULUSKAN OLEH,</td></tr>
+      <tr>${sigCell(o.sigSah)}${sigCell(o.sigLulus)}</tr>
+      <tr><td style="font-size:12px"><b>Nama :</b> ${esc(o.sahNama)}</td><td style="font-size:12px"><b>Nama :</b> ${esc(o.lulusNama)}</td></tr>
+      <tr><td style="font-size:12px"><b>Tarikh :</b> ${fmtDate(o.sahTarikh)}</td><td style="font-size:12px"><b>Tarikh :</b> ${fmtDate(o.lulusTarikh)}</td></tr></table>
+  </div>`;
+}
+
+async function doKewangan(ref, previewOnly = false) {
+  const tiada = $('k-tiada')?.checked;
+  if (tiada) {
+    if (previewOnly) return toast('Tiada KEW-04 untuk dipratonton.', 'info');
+    loading(true);
+    try { await api('lulusKewangan', { refNo: ref, tiadaImplikasi: true }); refreshAfter(ref, 'Direkod: tiada implikasi kewangan.'); } catch (err) { toast(err.message, 'err'); } finally { loading(false); }
+    return;
+  }
+  const o = { prog: $('k-prog').value.toUpperCase(), manfaat: $('k-manfaat').value.toUpperCase(), ringkasan: $('k-ringkasan').value.toUpperCase(), jumlah: $('k-rm').value, penerima: $('k-penerima').value.toUpperCase(), bank: $('k-bank').value.toUpperCase(), akaun: $('k-akaun').value, namaAkaun: $('k-namaakaun').value.toUpperCase(), sahNama: $('k-sah').value, sahTarikh: $('k-sah-t').value, lulusNama: $('k-lulus').value, lulusTarikh: $('k-lulus-t').value };
+  if (!previewOnly) {
+    if (!(Number(o.jumlah) > 0) || !o.penerima || !o.bank || !o.akaun) return toast('Sila lengkapkan jumlah, penerima & maklumat bank.', 'err');
+    if (!o.sahNama || !o.lulusNama) return toast('Sila pilih pengesah & pelulus.', 'err');
+    if (pads['pad-sah'].isEmpty() || pads['pad-lulus'].isEmpty()) return toast('Kedua-dua tandatangan diwajibkan.', 'err');
+  }
+  o.sigSah = pads['pad-sah'] && !pads['pad-sah'].isEmpty() ? pads['pad-sah'].toDataURL() : '';
+  o.sigLulus = pads['pad-lulus'] && !pads['pad-lulus'].isEmpty() ? pads['pad-lulus'].toDataURL() : '';
+  loading(true, 'Menjana borang kewangan...');
+  try {
+    const html = kewHtml(ref, o), fname = `${(DB.umum.KOD_BORANG_KEWANGAN || 'MCM-KEW-04').replace(/[^A-Za-z0-9-]/g,'')}_${ref.replace(/\//g, '-')}.pdf`;
+    if (previewOnly) { await previewPdf(html, fname); return; }
+    const pdfBase64 = await makePdf(html, fname);
+    await api('lulusKewangan', { refNo: ref, jumlahRM: o.jumlah, penerima: o.penerima, bank: o.bank, noAkaun: o.akaun, namaAkaun: o.namaAkaun, sahNama: o.sahNama, sahTarikh: o.sahTarikh, lulusNama: o.lulusNama, lulusTarikh: o.lulusTarikh, pdfBase64 });
+    refreshAfter(ref, 'Borang kewangan diluluskan & dihantar ke Kewangan.');
+  } catch (err) { toast(err.message, 'err'); } finally { loading(false); $('pdf-stage').innerHTML = ''; }
+}
+
+/* ---------------- 5. BAYARAN / PENYERAHAN ---------------- */
+function actBayaran(ref) {
+  const p = getP(ref), s = DB.sumbangan[ref] || {}, k = DB.kewangan[ref] || {};
+  const bentuk = s['Bentuk'];
+  const adaWang = ['WANG','WANG_BARANGAN','BAYARAN_PEMBEKAL'].includes(bentuk), adaBarang = ['BARANGAN','WANG_BARANGAN'].includes(bentuk);
+  const borang = DB.borang.find(b => String(b['Kod']) === String(p.kodBorang)) || {};
+  const tempoh = Number(borang['Tempoh Laporan (hari)'] || 14);
+  const akhir = new Date(Date.now() + tempoh * 86400000); akhir.setMinutes(akhir.getMinutes() - akhir.getTimezoneOffset());
+  $('a-title').textContent = 'Rekod Saluran · ' + ref;
+  $('a-body').innerHTML = `
+    ${section('Sumbangan', sumbanganHtml(s))}
+    ${adaWang ? `<div class="grid md:grid-cols-2 gap-3 border rounded p-3"><div class="md:col-span-2 font-bold text-xs uppercase">Bayaran ${k['Jumlah Diluluskan RM'] ? '(' + rm(k['Jumlah Diluluskan RM']) + ' kepada ' + esc(k['Penerima Bayaran']) + ')' : ''}</div>
+      <div><label class="lbl">Tarikh Bayaran *</label><input id="b-tarikh" type="date" class="inp" value="${todayISO()}"></div>
+      <div><label class="lbl">No. Rujukan Transaksi *</label><input id="b-trx" class="inp"></div>
+      <div class="md:col-span-2"><label class="lbl">Resit Transaksi (PDF/JPG)</label><input id="b-resit" type="file" accept=".pdf,image/png,image/jpeg" class="text-sm"></div></div>` : ''}
+    ${adaBarang ? `<div class="grid md:grid-cols-2 gap-3 border rounded p-3"><div class="md:col-span-2 font-bold text-xs uppercase">Penyerahan Barangan</div>
+      <div><label class="lbl">Tarikh Serahan *</label><input id="b-serah" type="date" class="inp" value="${todayISO()}"></div>
+      <div><label class="lbl">Bukti Serahan (gambar / borang terima)</label><input id="b-bukti" type="file" accept=".pdf,image/png,image/jpeg" class="text-sm"></div></div>` : ''}
+    <div class="grid md:grid-cols-2 gap-3 border rounded p-3 bg-gray-50">
+      <label class="flex items-center gap-2 font-semibold md:col-span-2"><input type="checkbox" id="b-lapor" ${borang['Laporan Wajib (Y/N)'] === 'Y' ? 'checked' : ''} onchange="$('b-akhir-wrap').classList.toggle('hidden', !this.checked)"> Pemohon wajib hantar Borang 13 Laporan Penajaan</label>
+      <div id="b-akhir-wrap" class="${borang['Laporan Wajib (Y/N)'] === 'Y' ? '' : 'hidden'}"><label class="lbl">Tarikh Akhir Laporan</label><input id="b-akhir" type="date" class="inp" value="${akhir.toISOString().slice(0,10)}"><p class="text-[11px] text-gray-500 mt-1">Default ${tempoh} hari. Laraskan ikut tarikh tamat program.</p></div>
+    </div>
+    <div><label class="lbl">Catatan</label><textarea id="b-catatan" rows="2" class="inp"></textarea></div>`;
+  $('a-actions').innerHTML = `<button class="btn bg-blue-600 text-white" onclick="doBayaran('${esc(ref)}')"><i class="fa-solid fa-check"></i> Simpan</button>`;
+  openModal('modal-action');
+}
+async function doBayaran(ref) {
+  loading(true, 'Memuat naik...');
+  try {
+    const d = { refNo: ref, catatan: $('b-catatan').value, laporanWajib: $('b-lapor').checked, tarikhAkhirLaporan: $('b-akhir')?.value };
+    if ($('b-tarikh')) { d.tarikhBayaran = $('b-tarikh').value; d.noTransaksi = $('b-trx').value.trim(); d.resit = await fileToB64($('b-resit').files[0]); }
+    if ($('b-serah')) { d.tarikhSerahan = $('b-serah').value; d.bukti = await fileToB64($('b-bukti').files[0]); }
+    await api('rekodBayaran', d);
+    refreshAfter(ref, 'Saluran direkod.');
+  } catch (err) { toast(err.message, 'err'); } finally { loading(false); }
+}
+
+/* ---------------- 6. LAPORAN ---------------- */
+function actLaporan(ref) {
+  $('a-title').textContent = 'Terima Laporan Penajaan · ' + ref;
+  $('a-body').innerHTML = `<div><label class="lbl">Fail Laporan (Borang 13)</label><input id="l-fail" type="file" accept=".pdf,image/png,image/jpeg" class="text-sm"></div><div><label class="lbl">Catatan</label><textarea id="l-catatan" rows="3" class="inp"></textarea></div>`;
+  $('a-actions').innerHTML = `<button class="btn bg-emerald-600 text-white" onclick="doLaporan('${esc(ref)}')">Tandakan Selesai</button>`;
+  openModal('modal-action');
+}
+async function doLaporan(ref) {
+  loading(true);
+  try { await api('terimaLaporan', { refNo: ref, catatan: $('l-catatan').value, fail: await fileToB64($('l-fail').files[0], 10) }); refreshAfter(ref, 'Laporan diterima. Permohonan selesai.'); }
+  catch (err) { toast(err.message, 'err'); } finally { loading(false); }
+}
+function actTarikhLaporan(ref) {
+  const v = prompt('Tarikh akhir laporan baharu (format YYYY-MM-DD):', todayISO());
+  if (!v) return;
+  loading(true);
+  api('kemaskiniTarikhLaporan', { refNo: ref, tarikhAkhir: v }).then(() => refreshAfter(ref, 'Tarikh akhir dikemas kini.')).catch(err => toast(err.message, 'err')).finally(() => loading(false));
+}
+
+/* ---------------- OVERRIDE ---------------- */
+function actOverride(ref) {
+  const p = getP(ref);
+  $('a-title').textContent = 'Tukar Status Manual (SUPERADMIN) · ' + ref;
+  $('a-body').innerHTML = `<div class="bg-red-50 border border-red-200 text-red-800 text-xs p-3 rounded">Guna hanya untuk betulkan kesilapan. Semua perubahan direkod dalam Audit_Log.</div>
+    <div><label class="lbl">Status Semasa</label>${badge(p.status)}</div>
+    <div><label class="lbl">Status Baru</label><select id="o-status" class="inp">${STATUS_ORDER.map(s => `<option value="${s}">${esc(statusLabel(s))}</option>`).join('')}</select></div>
+    <div><label class="lbl">Sebab *</label><textarea id="o-catatan" rows="3" class="inp"></textarea></div>`;
+  $('a-actions').innerHTML = `<button class="btn bg-red-700 text-white" onclick="doOverride('${esc(ref)}')">Tukar Status</button>`;
+  openModal('modal-action');
+}
+async function doOverride(ref) {
+  loading(true);
+  try { await api('tukarStatus', { refNo: ref, statusBaru: $('o-status').value, catatan: $('o-catatan').value.trim() }); refreshAfter(ref, 'Status ditukar.'); }
+  catch (err) { toast(err.message, 'err'); } finally { loading(false); }
+}
+
+/* ---------------- DAFTAR MANUAL ---------------- */
+function renderManualForm() {
+  if (!hasRole('ADMIN')) return;
+  const cur = $('m-kod').value;
+  $('m-kod').innerHTML = `<option value="">-- Pilih borang --</option>` + DB.borang.map(b => `<option value="${esc(b['Kod'])}">${esc(b['Kod'])} · ${esc(b['Nama Borang'])}</option>`).join('');
+  $('m-kod').value = cur;
+  if (!$('m-tarikh').value) $('m-tarikh').value = todayISO();
+  previewManualRef();
+}
+function previewManualRef() {
+  const b = DB.borang.find(x => String(x['Kod']) === $('m-kod').value);
+  if (!b) return $('m-ref-preview').textContent = '';
+  const y = new Date().getFullYear();
+  const n = Number(b['Tahun']) === y ? b['No Seterusnya'] : 1;
+  $('m-ref-preview').textContent = 'No. rujukan yang akan diberi: ' + String(b['Format Rujukan']).replace('{YYYY}', y).replace('{N}', n) + ' (jika tiada permohonan online masuk serentak)';
+}
+$('m-ic').addEventListener('input', e => { let v = e.target.value.replace(/\D/g, '').slice(0, 12); if (v.length > 8) v = v.slice(0,6) + '-' + v.slice(6,8) + '-' + v.slice(8); else if (v.length > 6) v = v.slice(0,6) + '-' + v.slice(6); e.target.value = v; });
+$('manual-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  if (!confirm('Daftar borang manual ini? Satu nombor rujukan akan digunakan.')) return;
+  loading(true, 'Mendaftar...');
+  try {
+    const r = await api('daftarManual', { kodBorang: $('m-kod').value, nama: $('m-nama').value, ic: $('m-ic').value, telefon: $('m-tel').value, emel: $('m-emel').value, tarikhTerima: $('m-tarikh').value, jenisBantuan: $('m-jenis').value, pic: $('m-pic').value, alamat: $('m-alamat').value, catatan: $('m-catatan').value, fail: await fileToB64($('m-fail').files[0]) });
+    toast('Berjaya didaftarkan: ' + r.refNo);
+    $('manual-form').reset(); $('m-tarikh').value = todayISO();
+    await loadData(); switchTab('list'); openDetail(r.refNo);
+  } catch (err) { toast(err.message, 'err'); } finally { loading(false); }
+});
+
+/* ---------------- TETAPAN ---------------- */
+const SETTINGS_DEF = {
+  borang: { title: 'Nombor Rujukan & Jenis Borang', role: 'ADMIN', note: '<b>No Seterusnya</b> ialah nombor yang akan diberi kepada permohonan akan datang. Contoh: online dah sampai No 5, borang manual masuk No 6 → guna <b>Daftar Manual</b> (auto ambil 6), atau set No Seterusnya = 7 di sini. Format guna {YYYY} untuk tahun dan {N} untuk nombor.',
+    cols: [['Kod', 70], ['Nama Borang', 240], ['Format Rujukan', 190], ['Tahun', 70], ['No Seterusnya', 90], ['Divisyen', 150], ['Kategori', 150], ['Laporan Wajib (Y/N)', 80], ['Tempoh Laporan (hari)', 80], ['Aktif (Y/N)', 60]] },
+  pegawai: { title: 'Pegawai Penandatangan', role: 'SUPERADMIN', note: 'Senarai nama yang boleh dipilih untuk tandatangan Surat Maklum Balas dan MCM-KEW-04. Tukar di sini bila jawatan bertukar — tak perlu ubah kod.',
+    cols: [['Nama', 240], ['Jawatan', 200], ['Tandatangan Surat (Y/N)', 100], ['Sahkan KEW-04 (Y/N)', 100], ['Luluskan KEW-04 (Y/N)', 100], ['Aktif (Y/N)', 70]] },
+  pengguna: { title: 'Pengguna Sistem', role: 'SUPERADMIN', note: 'Peranan: SUPERADMIN, ADMIN, MESYUARAT, PENGARAH, KEWANGAN (boleh lebih dari satu, pisah dengan koma). Isi <b>PIN Baru</b> untuk pengguna baru atau reset PIN (6 digit).',
+    cols: [['Emel', 220], ['Nama', 180], ['Peranan', 200], ['pinBaru', 90, 'PIN Baru'], ['Aktif (Y/N)', 70], ['Log Masuk Terakhir', 130, null, true]] },
+  umum: { title: 'Tetapan Umum', role: 'SUPERADMIN', note: 'BORANG13_FILE_ID: muat naik PDF Borang 13 ke Google Drive, buka fail, salin ID dari URL (antara /d/ dan /view).',
+    cols: [['Kunci', 200, null, false], ['Nilai', 360], ['Keterangan', 320]] }
+};
+let SET_ROWS = {};
+function renderSettings() {
+  const wrap = $('tab-settings'); wrap.innerHTML = '';
+  const data = { borang: DB.borang, pegawai: DB.pegawai, pengguna: DB.pengguna, umum: DB.umumPenuh };
+  Object.entries(SETTINGS_DEF).forEach(([key, def]) => {
+    if (!hasRole(def.role) || !data[key]) return;
+    SET_ROWS[key] = JSON.parse(JSON.stringify(data[key]));
+    const div = document.createElement('div');
+    div.className = 'bg-white rounded-xl shadow-sm p-5';
+    div.id = 'set-' + key;
+    wrap.appendChild(div);
+    renderSettingTable(key);
+  });
+}
+function renderSettingTable(key) {
+  const def = SETTINGS_DEF[key], rows = SET_ROWS[key];
+  $('set-' + key).innerHTML = `<div class="flex flex-wrap justify-between items-center gap-2 mb-2"><h3 class="font-bold">${def.title}</h3>
+    <div class="flex gap-2">${key !== 'umum' ? `<button class="btn bg-gray-200 text-xs" onclick="SET_ROWS['${key}'].push({});renderSettingTable('${key}')"><i class="fa-solid fa-plus"></i> Tambah</button>` : ''}
+    <button class="btn bg-emerald-600 text-white text-xs" onclick="saveSetting('${key}')"><i class="fa-solid fa-floppy-disk"></i> Simpan</button></div></div>
+    <p class="text-xs text-gray-600 mb-3">${def.note}</p>
+    <div class="overflow-x-auto"><table class="text-xs"><thead><tr>${def.cols.map(c => `<th class="text-left px-1 py-1 text-gray-500" style="min-width:${c[1]}px">${esc(c[2] || c[0])}</th>`).join('')}<th></th></tr></thead>
+    <tbody>${rows.map((r, i) => `<tr>${def.cols.map(c => {
+      const ro = c[3] === true || (key === 'umum' && c[0] === 'Kunci');
+      let v = r[c[0]] ?? ''; if (c[0] === 'Log Masuk Terakhir') v = v ? fmtDate(v) : '';
+      return `<td class="px-1 py-0.5"><input class="inp !py-1 text-xs ${ro ? 'bg-gray-100' : ''}" ${ro ? 'readonly' : ''} ${c[0] === 'pinBaru' ? 'type="password" maxlength="6"' : ''} value="${esc(v)}" oninput="SET_ROWS['${key}'][${i}]['${c[0]}']=this.value"></td>`;
+    }).join('')}<td>${key !== 'umum' ? `<button class="text-red-600 px-2" onclick="if(confirm('Buang baris ini?')){SET_ROWS['${key}'].splice(${i},1);renderSettingTable('${key}')}"><i class="fa-solid fa-trash"></i></button>` : ''}</td></tr>`).join('')}</tbody></table></div>`;
+}
+async function saveSetting(key) {
+  loading(true, 'Menyimpan tetapan...');
+  try { await api('simpanTetapan', { jenis: key, rows: SET_ROWS[key] }); toast('Tetapan disimpan.'); await loadData(); switchTab('settings'); }
+  catch (err) { toast(err.message, 'err'); } finally { loading(false); }
+}
+
+/* ---------------- EKSPORT MASTERLIST ---------------- */
+function exportMasterlist() {
+  const H = ['BIL','TARIKH MESYUARAT','TARIKH TERIMA','NO. RUJ','DIVISYEN','KATEGORI PROJEK','PERMOHONAN','TARIKH PROGRAM/ PROJEK','ORGANISASI/NAMA','NAMA PERHUBUNGAN','JAWATAN','NO. TELEFON','TARIKH KELULUSAN','STATUS','NILAI','TUNAI / BARANGAN','TINDAKAN','CATATAN','FAIL','STATUS (KEWANGAN)','NILAI SUMBANGAN','KOS OPERASI','TUNAI / BARANGAN (KEWANGAN)','TINDAKAN (KEWANGAN)','CATATAN (KEWANGAN)','FAIL (KEWANGAN)','TARIKH PEMBAYARAN','RESIT PEMBAYARAN KEPADA ADMIN','STATUS SISTEM','BERULANG 6 BULAN'];
+  const csvCell = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const list = [...DB.permohonan].sort((a, b) => new Date(a.tarikhSubmit) - new Date(b.tarikhSubmit));
+  const lines = [H.map(csvCell).join(',')];
+  list.forEach((p, i) => {
+    const s = DB.sumbangan[p.refNo] || {}, k = DB.kewangan[p.refNo] || {}, kep = DB.keputusan[p.refNo] || [];
+    const m = kep.filter(x => x['Peringkat'] === 'MESYUARAT').pop() || {};
+    const borang = DB.borang.find(b => String(b['Kod']) === String(p.kodBorang)) || {};
+    const nilai = Number(s['Jumlah Wang RM'] || 0) + Number(s['Nilai Barangan RM'] || 0);
+    const tb = { WANG: 'TUNAI', BAYARAN_PEMBEKAL: 'TUNAI', BARANGAN: 'BARANGAN', WANG_BARANGAN: 'TUNAI + BARANGAN' }[s['Bentuk']] || '';
+    const statusMesy = m['Keputusan'] ? (m['Kaedah Kelulusan'] && m['Kaedah Kelulusan'] !== 'MESYUARAT' && m['Keputusan'] === 'LULUS' ? m['Kaedah Kelulusan'] : (m['Keputusan'] === 'LULUS' ? 'LULUS MESYUARAT' : m['Keputusan'])) : (p.status === 'MESYUARAT' ? 'PROSES MESYUARAT' : '');
+    lines.push([i + 1, fmtDate(m['Tarikh Mesyuarat']), fmtDate(p.tarikhSubmit), p.refNo, borang['Divisyen'], borang['Kategori'] || p.namaBorang, p.jenisBantuan, '', p.nama, p.nama, '', p.telefon, fmtDate(m['Masa']), statusMesy, nilai ? nilai.toFixed(2) : '', tb, p.pic, m['Catatan'], p.folderUrl,
+      k['Tarikh Bayaran'] || k['Tarikh Serahan Barang'] ? 'SELESAI' : (p.status === 'TUNGGU_KEWANGAN' || p.status === 'TUNGGU_BAYARAN' ? 'PROSES KEWANGAN' : ''), k['Jumlah Diluluskan RM'] || '', '', tb, '', '', k['KEW04 URL'] || '', fmtDate(k['Tarikh Bayaran']), k['Resit URL'] || '', statusLabel(p.status), p.berulangTeks || (p.berulang.length ? 'YA' : 'TIDAK')].map(csvCell).join(','));
+  });
+  const blob = new Blob(['﻿' + lines.join('\n')], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `MASTERLIST_${todayISO()}.csv`; a.click();
+}
+
+/* ---------------- INIT ---------------- */
+(function init() {
+  try { const s = JSON.parse(sessionStorage.getItem('mcm_sess') || 'null'); if (s?.TOKEN) { TOKEN = s.TOKEN; ME = s.ME; startApp(); return; } } catch (e) {}
+  $('view-login').classList.remove('hidden');
+})();
+</script>
+</body>
+</html>

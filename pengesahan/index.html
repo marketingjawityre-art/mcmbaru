@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pengesahan & Penerimaan Sumbangan - MCM</title>
+<link rel="icon" href="https://i.postimg.cc/7LryVYZ0/image.png" type="image/png">
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<style>
+  body { font-family:'Inter',sans-serif; background:#f3f4f6; }
+  .inp { width:100%; border:1px solid #d1d5db; border-radius:.5rem; padding:.55rem .8rem; outline:none; }
+  .inp:focus { border-color:#059669; box-shadow:0 0 0 1px #059669; }
+  .lbl { display:block; font-size:.85rem; font-weight:600; color:#374151; margin-bottom:.25rem; }
+  .sig-wrap { position:relative; width:100%; height:160px; border:2px dashed #d1d5db; border-radius:.5rem; background:#f9fafb; }
+  .sig-wrap canvas { position:absolute; inset:0; width:100%; height:100%; }
+  .mcm-spin { position:relative; width:86px; height:86px; display:grid; place-items:center; margin:0 auto; }
+  .mcm-spin::before { content:''; position:absolute; inset:0; border:3px solid #d1fae5; border-top-color:#059669; border-radius:50%; animation:spin 1s linear infinite; }
+  .mcm-spin img { width:56px; height:56px; object-fit:contain; animation:mcmpulse 1.4s ease-in-out infinite; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  @keyframes mcmpulse { 0%,100% { transform:scale(.9); opacity:.75 } 50% { transform:scale(1.06); opacity:1 } }
+  #pdf-stage { position:fixed; left:0; top:0; z-index:-1; opacity:0; pointer-events:none; }
+  .a4 { width:794px; background:#fff; color:#000; font-family:Arial,sans-serif; font-size:13px; line-height:1.6; padding:40px 48px; }
+</style>
+</head>
+<body class="text-gray-800">
+<header class="bg-gray-900 text-white shadow sticky top-0 z-40">
+  <div class="max-w-3xl mx-auto px-4 py-3 flex items-center gap-3">
+    <img src="https://i.postimg.cc/7LryVYZ0/image.png" class="h-10 bg-white/20 p-1 rounded" alt="">
+    <div class="font-bold leading-tight">Pengesahan & Penerimaan Sumbangan<br><span class="text-gray-400 text-sm font-normal">Muslim Care Malaysia Society</span></div>
+  </div>
+</header>
+
+<main class="max-w-3xl mx-auto px-4 py-8">
+  <div id="state-loading" class="text-center py-20"><div class="mcm-spin mb-4"><img src="https://i.postimg.cc/7LryVYZ0/image.png" alt=""></div><p class="text-gray-600">Menyemak pautan...</p></div>
+  <div id="state-error" class="hidden bg-white rounded-xl shadow p-10 text-center"><i class="fa-solid fa-circle-xmark text-5xl text-red-500 mb-4"></i><h2 class="text-xl font-bold mb-2" id="err-title">Pautan tidak sah</h2><p class="text-gray-600" id="err-msg"></p></div>
+
+  <div id="state-form" class="hidden space-y-6">
+    <div class="bg-emerald-50 border border-emerald-200 text-emerald-900 p-4 rounded-xl flex gap-3">
+      <i class="fa-solid fa-circle-check text-xl mt-0.5"></i>
+      <div><h3 class="font-bold">Permohonan anda telah diluluskan.</h3>
+      <p class="text-sm mt-1">Sila nyatakan penerimaan dan persetujuan anda terhadap terma dalam Surat Maklum Balas Permohonan Sumbangan, dan hantar borang ini <b>dalam tempoh tiga (3) hari</b> dari tarikh surat dikeluarkan.</p></div>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+      <div class="bg-gray-50 px-6 py-3 border-b"><h2 class="font-bold">Keputusan Kelulusan</h2><p class="text-sm text-gray-500">Rujukan: <b id="v-ref"></b></p></div>
+      <div class="p-6 text-sm space-y-2" id="v-sumbangan"></div>
+    </div>
+
+    <form id="f" class="bg-white rounded-xl shadow-sm p-6 space-y-6" onsubmit="event.preventDefault()">
+      <div>
+        <h3 class="font-bold border-b pb-2 mb-4">1. Persetujuan</h3>
+        <p class="text-sm mb-3">Saya / Kami <b id="v-nama" class="uppercase"></b> mengakui penerimaan surat ini dan:</p>
+        <div class="grid sm:grid-cols-2 gap-3">
+          <label class="flex items-center gap-3 border-2 rounded-lg p-3 cursor-pointer has-[:checked]:border-emerald-600 has-[:checked]:bg-emerald-50"><input type="radio" name="setuju" value="Y" class="w-5 h-5"> <b class="text-emerald-700">SETUJU</b></label>
+          <label class="flex items-center gap-3 border-2 rounded-lg p-3 cursor-pointer has-[:checked]:border-red-600 has-[:checked]:bg-red-50"><input type="radio" name="setuju" value="N" class="w-5 h-5"> <b class="text-red-700">TIDAK SETUJU</b></label>
+        </div>
+        <p class="text-sm mt-3">menerima keputusan kelulusan oleh Muslim Care Malaysia dalam bentuk sumbangan di atas, dengan terma yang dinyatakan dan (jika berkenaan) akan mengemukakan laporan menggunakan <b>BORANG 13: LAPORAN PENAJAAN PROGRAM</b> dalam tempoh 14 hari (2 minggu) selepas tamat program.</p>
+        <div id="sec-sebab" class="hidden mt-3"><label class="lbl">Sebab tidak bersetuju (pilihan)</label><textarea id="i-sebab" rows="2" class="inp"></textarea></div>
+      </div>
+
+      <div id="sec-bank" class="hidden">
+        <h3 class="font-bold border-b pb-2 mb-1">2. Maklumat Akaun Bank</h3>
+        <p class="text-xs text-gray-500 mb-4">(Diisi oleh penerima sumbangan wang sahaja) Saya / Kami mengesahkan maklumat bank di bawah adalah benar.</p>
+        <div class="grid md:grid-cols-2 gap-4">
+          <div><label class="lbl">Nama Bank *</label><input id="i-bank" class="inp uppercase" placeholder="Cth: MAYBANK ISLAMIC"></div>
+          <div><label class="lbl">Nama Akaun *</label><input id="i-namaakaun" class="inp uppercase" placeholder="Mesti sama dengan nama pemohon/organisasi"></div>
+          <div><label class="lbl">No. Akaun *</label><input id="i-akaun" class="inp" inputmode="numeric" placeholder="Nombor sahaja"></div>
+          <div><label class="lbl">Ulang No. Akaun *</label><input id="i-akaun2" class="inp" inputmode="numeric" autocomplete="off"></div>
+        </div>
+        <details class="mt-4"><summary class="text-sm font-semibold text-blue-700 cursor-pointer">Akaun luar negara? Isi IBAN & Swift Code</summary>
+          <div class="grid md:grid-cols-2 gap-4 mt-3">
+            <div><label class="lbl">No. IBAN (luar negara)</label><input id="i-iban" class="inp uppercase"></div>
+            <div><label class="lbl">Swift Code (luar negara)</label><input id="i-swift" class="inp uppercase"></div>
+          </div>
+          <p class="text-xs text-gray-500 mt-1">Untuk akaun luar negara, No. Akaun boleh dikosongkan jika IBAN diisi.</p>
+        </details>
+      </div>
+
+      <div id="sec-barang" class="hidden">
+        <h3 class="font-bold border-b pb-2 mb-4">Maklumat Penerimaan Barangan</h3>
+        <label class="lbl">Alamat Penghantaran / Lokasi Serahan (untuk rujukan MCM)</label>
+        <textarea id="i-alamat" rows="3" class="inp uppercase"></textarea>
+      </div>
+
+      <div>
+        <h3 class="font-bold border-b pb-2 mb-4">Tandatangan</h3>
+        <div class="grid md:grid-cols-2 gap-6">
+          <div class="space-y-3">
+            <div><label class="lbl">Nama</label><input id="i-nama" class="inp uppercase bg-gray-50" readonly></div>
+            <div><label class="lbl">Jawatan *</label><input id="i-jawatan" class="inp uppercase" placeholder="Cth: PELAJAR / PENGERUSI / INDIVIDU"></div>
+            <div><label class="lbl">Tarikh</label><input id="i-tarikh" class="inp bg-gray-50" readonly></div>
+          </div>
+          <div>
+            <div class="flex justify-between items-end mb-1"><label class="lbl !mb-0">Tandatangan *</label><button type="button" class="text-xs text-red-600" onclick="pad.clear()"><i class="fa-solid fa-eraser"></i> Padam</button></div>
+            <div class="sig-wrap"><canvas id="sig"></canvas></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex justify-end pt-4 border-t">
+        <button id="btn-submit" type="button" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-8 rounded-lg shadow flex items-center gap-2"><i class="fa-solid fa-paper-plane"></i> Hantar Pengesahan</button>
+      </div>
+    </form>
+  </div>
+
+  <div id="state-done" class="hidden bg-white rounded-xl shadow p-10 text-center">
+    <div class="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-5 text-emerald-600"><i class="fa-solid fa-check text-4xl"></i></div>
+    <h2 class="text-2xl font-bold mb-2">Pengesahan Diterima</h2>
+    <p class="text-gray-600">Terima kasih. Surat Pengesahan & Penerimaan anda telah dihantar ke Muslim Care Malaysia untuk proses penyaluran sumbangan.</p>
+    <button id="btn-dl" class="mt-6 bg-amber-500 hover:bg-amber-600 text-white font-semibold py-2 px-6 rounded-lg"><i class="fa-solid fa-file-pdf mr-2"></i>Muat Turun Salinan</button>
+  </div>
+</main>
+
+<div id="overlay" class="fixed inset-0 bg-white/90 z-50 hidden flex flex-col items-center justify-center"><div class="mcm-spin mb-4"><img src="https://i.postimg.cc/7LryVYZ0/image.png" crossorigin="anonymous" alt=""></div><p class="text-emerald-700 font-medium">Menjana PDF &amp; menghantar...</p></div>
+<div id="pdf-stage"></div>
+
+<script>
+const API_URL = 'https://script.google.com/macros/s/AKfycbzjZRBiOeFxkc47QYwhCpaxoKg_p-NH0oCrx6AzXmBks6AIntxDeVJTBX0BqR7rbQlq7w/exec';
+const LOGO = 'https://i.postimg.cc/7LryVYZ0/image.png';
+const BIL_PINDAAN = '2 (Ogos 2026)';
+const BENTUK_LABEL = { WANG: 'WANG', BARANGAN: 'BARANGAN', WANG_BARANGAN: 'WANG DAN BARANGAN', BAYARAN_PEMBEKAL: 'WANG - BAYARAN TERUS KEPADA PEMBEKAL' };
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const rm = n => 'RM ' + Number(n || 0).toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const today = () => { const d = new Date(); return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`; };
+const hijri = () => { try { return new Intl.DateTimeFormat('ms-MY-u-ca-islamic', { day:'numeric', month:'long', year:'numeric' }).format(new Date()); } catch (e) { return ''; } };
+
+const token = new URLSearchParams(location.search).get('t');
+let INFO = null, pad = null, lastPdfHtml = '';
+
+function show(id) { ['state-loading','state-error','state-form','state-done'].forEach(x => $(x).classList.toggle('hidden', x !== id)); }
+function fail(title, msg) { $('err-title').textContent = title; $('err-msg').textContent = msg; show('state-error'); }
+const isWang = () => INFO && (INFO.bentuk === 'WANG' || INFO.bentuk === 'WANG_BARANGAN');
+const isBarang = () => INFO && (INFO.bentuk === 'BARANGAN' || INFO.bentuk === 'WANG_BARANGAN');
+const setuju = () => { const v = document.querySelector('input[name="setuju"]:checked')?.value; return v === 'Y' ? true : v === 'N' ? false : null; };
+
+(async function init() {
+  if (!token) return fail('Pautan tidak lengkap', 'Sila gunakan pautan penuh yang dihantar melalui e-mel kelulusan.');
+  try {
+    const r = await (await fetch(`${API_URL}?action=pengesahanInfo&t=${encodeURIComponent(token)}`)).json();
+    if (r.status !== 'success') throw new Error(r.message);
+    INFO = r;
+    if (r.statusKod !== 'TUNGGU_PENGESAHAN') return fail('Pengesahan telah diterima', `Borang pengesahan untuk rujukan ${r.refNo} telah dihantar sebelum ini atau tidak diperlukan lagi. Hubungi MCM jika ada pertanyaan.`);
+    render();
+  } catch (err) { fail('Pautan tidak sah', err.message); }
+})();
+
+function render() {
+  const b = INFO.bentuk, brg = INFO.barangan || [];
+  $('v-ref').textContent = INFO.refNo;
+  $('v-nama').textContent = INFO.nama;
+  $('i-nama').value = INFO.nama;
+  $('i-tarikh').value = today();
+  $('v-sumbangan').innerHTML = `
+    <div><span class="text-gray-500">Bentuk:</span> <b>${esc(BENTUK_LABEL[b] || b)}</b></div>
+    ${INFO.jumlahWang ? `<div><span class="text-gray-500">Jumlah Wang:</span> <b>${rm(INFO.jumlahWang)}</b>${b === 'BAYARAN_PEMBEKAL' ? ` <span class="text-xs">(dibayar terus kepada pembekal${INFO.pembekal ? ': ' + esc(INFO.pembekal) : ''})</span>` : ''}</div>` : ''}
+    ${brg.length ? `<div><span class="text-gray-500">Barangan:</span><ul class="list-disc ml-6">${brg.map(x => `<li><b>${esc(x.nama)}</b> × ${esc(x.kuantiti)} ${esc(x.unit)}</li>`).join('')}</ul></div>` : ''}
+    <div><span class="text-gray-500">Tujuan:</span> <b>${esc(INFO.tujuan)}</b></div>`;
+  $('i-alamat').value = INFO.alamat || '';
+  document.querySelectorAll('input[name="setuju"]').forEach(r => r.addEventListener('change', toggle));
+  toggle();
+  show('state-form');
+  requestAnimationFrame(() => {
+    const c = $('sig'), ratio = Math.max(window.devicePixelRatio || 1, 1);
+    c.width = c.offsetWidth * ratio; c.height = c.offsetHeight * ratio; c.getContext('2d').scale(ratio, ratio);
+    pad = new SignaturePad(c, { penColor: 'rgb(0,0,0)' });
+  });
+}
+function toggle() {
+  const s = setuju();
+  $('sec-bank').classList.toggle('hidden', !(s === true && isWang()));
+  $('sec-barang').classList.toggle('hidden', !(s === true && isBarang()));
+  $('sec-sebab').classList.toggle('hidden', s !== false);
+}
+
+['i-akaun','i-akaun2'].forEach(id => $(id).addEventListener('input', e => e.target.value = e.target.value.replace(/\D/g, '')));
+
+function pdfHtml(d) {
+  const b = INFO.bentuk, brg = INFO.barangan || [];
+  const tick = c => `<span style="display:inline-flex;width:14px;height:14px;border:1px solid #000;align-items:center;justify-content:center;font-size:11px;font-weight:bold;margin-right:10px;vertical-align:middle">${c ? '✓' : ''}</span>`;
+  const hdr = small => `<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:${small ? 14 : 20}px"><img src="${LOGO}" crossorigin="anonymous" style="height:${small ? 44 : 60}px">
+    <div style="text-align:right"><div style="font-weight:bold;font-size:13px">PENGESAHAN DAN PENERIMAAN SUMBANGAN</div><div style="font-size:12px">MUSLIM CARE MALAYSIA SOCIETY</div><div style="font-size:10px">Bil. Pindaan : ${BIL_PINDAAN}</div>
+    ${small ? '' : `<table style="margin-left:auto;margin-top:10px;font-size:12px;text-align:left"><tr><td style="padding-right:12px">Rujukan Kami</td><td>: <b>${esc(INFO.refNo)}</b></td></tr><tr><td>Tarikh</td><td>: ${today()}</td></tr><tr><td>Bersamaan</td><td>: ${esc(hijri())}</td></tr></table>`}</div></div>`;
+  const ul = (t, w) => `<span style="display:inline-block;min-width:${w}px;border-bottom:1px solid #000;text-align:center;font-weight:bold;padding:0 6px">${esc(t)}</span>`;
+  const wang = ['WANG','WANG_BARANGAN'].includes(b), pb = b === 'BAYARAN_PEMBEKAL', brgOn = ['BARANGAN','WANG_BARANGAN'].includes(b);
+  const bankRow = (l, v) => `<tr><td style="border:1px solid #000;padding:5px 8px;width:38%;font-weight:bold">${l}</td><td style="border:1px solid #000;padding:5px 8px">${esc(v || '')}</td></tr>`;
+  return `<div class="a4">
+    ${hdr(false)}
+    <p style="text-align:justify">Sila nyatakan penerimaan dan persetujuan anda dengan terma-terma yang terdapat di dalam Borang Maklum Balas Permohonan Sumbangan dengan menandatangani dan mengembalikan salinan pendua surat Pengesahan dan Penerimaan Sumbangan dalam tempoh tiga (3) hari selepas tarikh pada surat ini dikeluarkan (salinan surat ini boleh juga dihantar melalui e-mel).</p>
+    <p style="margin-top:14px">Saya / Kami ${ul(d.nama, 360)} (nama / nama organisasi) mengakui penerimaan surat ini dan</p>
+    <div style="margin:8px 0 8px 24px;line-height:2"><div>${tick(d.setuju)}<b>SETUJU</b></div><div>${tick(!d.setuju)}<b>TIDAK SETUJU</b></div></div>
+    <p>menerima keputusan kelulusan oleh Muslim Care Malaysia dalam bentuk;</p>
+    <div style="margin:8px 0 8px 24px;line-height:2">
+      <div>${tick(wang)}<b>WANG</b>${wang && INFO.jumlahWang ? ' &nbsp;– ' + rm(INFO.jumlahWang) : ''}</div>
+      <div>${tick(pb)}<b>BAYARAN TERUS KEPADA PEMBEKAL</b>${pb && INFO.jumlahWang ? ' &nbsp;– ' + rm(INFO.jumlahWang) + (INFO.pembekal ? ' (' + esc(INFO.pembekal) + ')' : '') : ''}</div>
+      <div>${tick(brgOn)}<b>BARANGAN</b>${brgOn && brg.length ? ' &nbsp;– ' + esc(brg.map(x => x.nama + ' x' + x.kuantiti + ' ' + x.unit).join(', ')) : ''}</div>
+    </div>
+    <p style="text-align:justify">dengan terma yang dinyatakan dan (jika berkenaan) akan mengemukakan laporan menggunakan <b>BORANG 13: LAPORAN PENAJAAN PROGRAM</b> dalam tempoh 14 hari (2 minggu) selepas tamat program.</p>
+    ${d.setuju === false && d.sebab ? `<p style="margin-top:8px"><b>Sebab tidak bersetuju:</b> ${esc(d.sebab)}</p>` : ''}
+    <p style="margin-top:14px">(Diisi oleh penerima sumbangan wang sahaja) Saya / Kami dengan ini mengesahkan bahawa maklumat bank akaun di bawah adalah benar;</p>
+    <table style="width:100%;border-collapse:collapse;margin:8px 0 18px;font-size:12px">
+      ${bankRow('Nama Bank', d.bank)}${bankRow('Nama Akaun', d.namaAkaun)}${bankRow('No. Akaun', d.akaun)}${bankRow('No. IBAN (luar negara)', d.iban)}${bankRow('Swift Code (luar negara)', d.swift)}
+    </table>
+    <p>Tandatangan;</p>
+    <div style="height:80px;width:240px;display:flex;align-items:flex-end"><img src="${d.sig}" style="max-height:78px;max-width:230px"></div>
+    <div style="border-top:1px dashed #000;width:240px"></div>
+    <table style="font-size:12px;margin-top:6px"><tr><td style="padding-right:10px;width:70px">Nama</td><td>: <b>${esc(d.nama)}</b></td></tr><tr><td>Jawatan</td><td>: ${esc(d.jawatan)}</td></tr><tr><td>Tarikh</td><td>: ${today()}</td></tr></table>
+    <div class="html2pdf__page-break"></div>
+    <div style="padding-top:36px">${hdr(true)}</div>
+    <div style="text-align:center;font-weight:bold;margin-bottom:14px;text-decoration:underline">GARIS PANDUAN PAPARAN JENAMA</div>
+    <p style="text-align:justify">Kami mengucapkan ribuan terima kasih di atas khidmat anda membantu komuniti yang terjejas. Kami memahami anda ingin berkongsi kerja-kerja anda di media sosial atau media cetak. Oleh yang demikian, kami telah menyediakan garis panduan jenama yang mesti dipatuhi dan diberi perhatian sekiranya anda menerima sumbangan atau tajaan kami.</p>
+    <p style="margin-top:12px"><b>Tindakan No. 1: Sentiasa ‘tag’, ‘mention’ kami pada siaran media sosial anda</b><br>Sila ‘tag’, ‘mention’ Muslim Care Malaysia bagi program yang dibiayai.</p><p style="text-align:center;font-weight:bold">@muslimcaremalaysiasociety</p>
+    <p style="margin-top:12px;text-align:justify"><b>Tindakan No. 2: Menggunakan logo MCM</b><br>Penggunaan logo MCM perlu mendapat kebenaran. Semasa memaparkan logo pada poster, gegantung, sepanduk, plakad, latar belakang, barang bantuan, slaid pembentangan, skrin Zoom/Google Meet/Teams, sila tampilkan bersama tajuk ‘Di Sokong Oleh’.</p>
+    <p style="margin-top:12px"><b>Tindakan No. 3: Zon jelas dan saiz minimum</b><br>Menjaga integriti logo MCM dengan;<br>&nbsp;&nbsp;i.&nbsp;&nbsp;Jauhkan dari unsur-unsur lain disekitarnya. Ruang kosong disekitar logo ini dikenali sebagai ‘zon jelas’.<br>&nbsp;&nbsp;ii.&nbsp;Mengekalkan ukuran minimum logo 3 cm.</p>
+    <p style="margin-top:12px;text-align:justify"><b>Tindakan No. 4: Warna</b><br>Warna logo MCM adalah yang ditunjukan di sini. Sekiranya mungkin, versi penuh logo harus digunakan untuk semua bahan komunikasi, termasuk iklan cetak dan televisyen, ‘collaterals’ dan media elektronik. Sampel berikut merupakan panduan warna logo.</p>
+    <p style="margin-top:12px;text-align:justify"><b>Tindakan No. 5: Mengubah saiz</b><br>Semasa mengubah saiz logo, sila pastikan kebolehbacaannya tidak terjejas. Berikut merupakan cara yang betul dan cara yang tidak betul dalam mengubah saiz logo MCM. Cara yang betul untuk mengubah saiz logo dengan menyeret sudut.</p>
+    <p style="margin-top:12px;text-align:justify"><b>Tindakan No. 6: Berkomunikasi dengan media</b><br>Apabila anda berhubung, bercakap, menghantar berita kepada pihak media, sila pastikan anda menyatakan bahawa program ini <b>DISOKONG OLEH MUSLIM CARE MALAYSIA</b>.</p>
+  </div>`;
+}
+
+$('btn-submit').addEventListener('click', async () => {
+  const s = setuju();
+  if (s === null) return alert('Sila pilih SETUJU atau TIDAK SETUJU.');
+  const perluBank = s && isWang();
+  const d = { setuju: s, nama: INFO.nama, jawatan: $('i-jawatan').value.trim().toUpperCase(), sebab: s === false ? $('i-sebab').value.trim() : '',
+    bank: perluBank ? $('i-bank').value.trim().toUpperCase() : '', namaAkaun: perluBank ? $('i-namaakaun').value.trim().toUpperCase() : '',
+    akaun: perluBank ? $('i-akaun').value.trim() : '', iban: perluBank ? $('i-iban').value.replace(/\s/g, '').toUpperCase() : '', swift: perluBank ? $('i-swift').value.trim().toUpperCase() : '',
+    alamat: s && isBarang() ? $('i-alamat').value.trim().toUpperCase() : '' };
+  if (!d.jawatan) return alert('Sila isi Jawatan.');
+  if (perluBank) {
+    if (!d.bank || !d.namaAkaun) return alert('Sila lengkapkan Nama Bank dan Nama Akaun.');
+    if (!d.iban && d.akaun.length < 6) return alert('Sila isi No. Akaun (atau IBAN untuk akaun luar negara).');
+    if (d.akaun && d.akaun !== $('i-akaun2').value.trim()) return alert('No. akaun bank tidak sepadan. Sila semak semula.');
+  }
+  if (!pad || pad.isEmpty()) return alert('Sila turunkan tandatangan.');
+  if (s === false && !confirm('Anda memilih TIDAK SETUJU. Sumbangan tidak akan disalurkan. Teruskan?')) return;
+  d.sig = pad.toDataURL('image/png');
+
+  $('overlay').classList.remove('hidden');
+  try {
+    lastPdfHtml = pdfHtml(d);
+    $('pdf-stage').innerHTML = lastPdfHtml;
+    const pdfBase64 = await html2pdf().set({ margin: 0, image: { type: 'jpeg', quality: 0.95 }, html2canvas: { scale: 2, useCORS: true }, jsPDF: { unit: 'mm', format: 'a4' } }).from($('pdf-stage').firstElementChild).output('datauristring');
+    const res = await (await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: 'submitPengesahan', token, pdfBase64, setuju: d.setuju, sebab: d.sebab, namaOrg: d.nama, jawatan: d.jawatan, bankName: d.bank, bankAccountName: d.namaAkaun, bankAccountNo: d.akaun, iban: d.iban, swift: d.swift, alamatPenghantaran: d.alamat }) })).json();
+    if (res.status !== 'success') throw new Error(res.message);
+    if (!d.setuju) { $('state-done').querySelector('h2').textContent = 'Maklum Balas Diterima'; $('state-done').querySelector('p').textContent = 'Terima kasih. Maklum balas TIDAK SETUJU anda telah direkodkan oleh Muslim Care Malaysia.'; }
+    show('state-done');
+  } catch (err) { alert('Ralat: ' + err.message); }
+  finally { $('overlay').classList.add('hidden'); }
+});
+
+$('btn-dl').addEventListener('click', () => {
+  $('pdf-stage').innerHTML = lastPdfHtml;
+  html2pdf().set({ margin: 0, filename: `Pengesahan_${INFO.refNo.replace(/\//g, '-')}.pdf`, image: { type: 'jpeg', quality: 0.95 }, html2canvas: { scale: 2, useCORS: true }, jsPDF: { unit: 'mm', format: 'a4' } }).from($('pdf-stage').firstElementChild).save();
+});
+</script>
+</body>
+</html>

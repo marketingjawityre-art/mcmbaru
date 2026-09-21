@@ -1,0 +1,1202 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Permohonan Bantuan Peranti & Pendidikan</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" href="https://i.postimg.cc/7LryVYZ0/image.png" type="image/png">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Signature Pad Library -->
+    <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
+    
+    <!-- html2pdf.js for Client-side PDF Generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+    <!-- PDF.js for rendering uploaded PDFs into the preview -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6; /* Gray-100 */
+        }
+        
+        .step-active {
+            color: #059669; /* Emerald 600 */
+            border-color: #059669;
+        }
+        
+        .step-inactive {
+            color: #9ca3af; /* Gray 400 */
+            border-color: #e5e7eb; /* Gray 200 */
+        }
+        
+        /* Signature Canvas styling */
+        .signature-wrapper {
+            position: relative;
+            width: 100%;
+            height: 200px;
+            -moz-user-select: none;
+            -webkit-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            border: 2px dashed #d1d5db;
+            border-radius: 0.5rem;
+            background-color: #f9fafb;
+        }
+        .signature-pad {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            border-radius: 0.5rem;
+        }
+        
+        /* A4 Preview Container for PDF generation */
+        .a4-preview {
+            background: white;
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            color: #000;
+        }
+        
+        @media (max-width: 640px) {
+            .a4-preview {
+                padding: 15px;
+            }
+        }
+
+        /* PDF Printing specifically */
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            #view-preview, #view-preview * {
+                visibility: visible;
+            }
+            #view-preview {
+                position: absolute;
+                left: 0;
+                top: 0;
+                box-shadow: none;
+            }
+            .no-print {
+                display: none !important;
+            }
+        }
+
+        /* Loading Spinner */
+        .mcm-spin { position:relative; width:86px; height:86px; display:grid; place-items:center; margin:0 auto; }
+        .mcm-spin::before { content:''; position:absolute; inset:0; border:3px solid #d1fae5; border-top-color:#059669; border-radius:50%; animation: spin 1s linear infinite; }
+        .mcm-spin img { width:56px; height:56px; object-fit:contain; animation: mcmpulse 1.4s ease-in-out infinite; }
+        @keyframes mcmpulse { 0%,100% { transform:scale(.9); opacity:.75 } 50% { transform:scale(1.06); opacity:1 } }
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #059669;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="antialiased text-gray-800">
+
+    <!-- Navbar / Header -->
+    <header class="bg-emerald-700 text-white shadow-md sticky top-0 z-50">
+        <div class="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <img src="https://i.postimg.cc/7LryVYZ0/image.png" alt="Logo MCM" crossorigin="anonymous" class="h-10 w-auto object-contain bg-white/20 p-1 rounded">
+                <h1 class="font-bold text-lg leading-tight">Permohonan Bantuan<br><span class="text-emerald-200 text-sm font-normal">Pendidikan & Peranti Pintar</span></h1>
+            </div>
+            <a href="../borang/" class="bg-emerald-800 hover:bg-emerald-900 px-3 py-2 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition flex items-center border border-emerald-600 shadow-sm">
+                <i class="fa-solid fa-list mr-2"></i> Senarai Borang
+            </a>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="max-w-5xl mx-auto px-4 py-8">
+        
+        <!-- Progress Stepper -->
+        <div class="mb-8 hidden sm:block">
+            <div class="flex items-center justify-between border-b pb-4">
+                <div id="step-1-indicator" class="flex flex-col items-center step-active flex-1">
+                    <div class="w-8 h-8 rounded-full border-2 flex items-center justify-center font-bold mb-2 bg-white">1</div>
+                    <span class="text-sm font-medium text-center">Terma & Syarat</span>
+                </div>
+                <div id="step-2-indicator" class="flex flex-col items-center step-inactive flex-1">
+                    <div class="w-8 h-8 rounded-full border-2 flex items-center justify-center font-bold mb-2 bg-white">2</div>
+                    <span class="text-sm font-medium text-center">Borang Permohonan</span>
+                </div>
+                <div id="step-3-indicator" class="flex flex-col items-center step-inactive flex-1">
+                    <div class="w-8 h-8 rounded-full border-2 flex items-center justify-center font-bold mb-2 bg-white">3</div>
+                    <span class="text-sm font-medium text-center">Pratonton PDF</span>
+                </div>
+                <div id="step-4-indicator" class="flex flex-col items-center step-inactive flex-1">
+                    <div class="w-8 h-8 rounded-full border-2 flex items-center justify-center font-bold mb-2 bg-white">4</div>
+                    <span class="text-sm font-medium text-center">Selesai</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- VIEW 1: REQUIREMENTS -->
+        <div id="view-requirements" class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden transition-all">
+            <div class="bg-emerald-50 px-6 py-4 border-b border-emerald-100">
+                <h2 class="text-xl font-bold text-emerald-800"><i class="fa-solid fa-file-contract mr-2"></i> Panduan & Syarat Permohonan</h2>
+            </div>
+            
+            <div class="p-6 space-y-6 text-sm text-gray-700 leading-relaxed">
+                <!-- Syarat-Syarat -->
+                <div>
+                    <h3 class="font-bold text-lg text-gray-900 mb-2 border-l-4 border-emerald-500 pl-3">SYARAT-SYARAT</h3>
+                    <ul class="list-none space-y-2 pl-2">
+                        <li class="flex items-start"><i class="fa-solid fa-check text-emerald-500 mt-1 mr-3"></i> <span>i. Pemohon ialah pelajar warganegara Malaysia.</span></li>
+                        <li class="flex items-start"><i class="fa-solid fa-check text-emerald-500 mt-1 mr-3"></i> <span>ii. Pelajar ataupun mahasiswa Institut Pengajian Tinggi (IPT) layak untuk memohon bantuan ini tanpa mengira mereka adalah merupakan pelajar Politeknik, Kolej Komuniti, IPTS dan Universiti Awam (UA).</span></li>
+                        <li class="flex items-start"><i class="fa-solid fa-check text-emerald-500 mt-1 mr-3"></i> <span>iii. Pendapatan isi rumah di bawah RM1,500 sebulan.</span></li>
+                    </ul>
+                </div>
+
+                <!-- Kriteria Keutamaan -->
+                <div>
+                    <h3 class="font-bold text-lg text-gray-900 mb-2 border-l-4 border-emerald-500 pl-3">KRITERIA KEUTAMAAN</h3>
+                    <ul class="list-none space-y-2 pl-2">
+                        <li class="flex items-start"><i class="fa-solid fa-star text-amber-500 mt-1 mr-3"></i> <span>i. Orang Kelainan Upaya (OKU).</span></li>
+                        <li class="flex items-start"><i class="fa-solid fa-star text-amber-500 mt-1 mr-3"></i> <span>ii. Ibu/bapa tunggal dengan tanggungan ramai.</span></li>
+                        <li class="flex items-start"><i class="fa-solid fa-star text-amber-500 mt-1 mr-3"></i> <span>iii. Pelajar yang tidak memiliki komputer riba.</span></li>
+                        <li class="flex items-start"><i class="fa-solid fa-star text-amber-500 mt-1 mr-3"></i> <span>iv. Keutamaan pelaksanaan program adalah kepada mereka yang mempunyai kadar kemiskinan tegar.</span></li>
+                    </ul>
+                </div>
+
+                <!-- Dokumen Utama (Lengkap) -->
+                <div>
+                    <h3 class="font-bold text-lg text-gray-900 mb-2 border-l-4 border-emerald-500 pl-3">DOKUMEN UTAMA (WAJIB DILENGKAPKAN)</h3>
+                    <ul class="list-none space-y-2 pl-2">
+                        <li class="flex items-start"><i class="fa-solid fa-pen text-emerald-500 mt-1 mr-3"></i> <span>i. Borang ini mesti diisi dengan menggunakan HURUF BESAR.</span></li>
+                        <li class="flex items-start"><i class="fa-solid fa-pen text-emerald-500 mt-1 mr-3"></i> <span>ii. Hanya borang yang lengkap akan diproses. Kegagalan melengkapkan borang akan menyebabkan permohonan ditolak tanpa notis kepada pemohon.</span></li>
+                        <li class="flex items-start"><i class="fa-solid fa-pen text-emerald-500 mt-1 mr-3"></i> <span>iii. Borang permohonan hendaklah dihantar kepada mana-mana exco Muslim Care Malaysia atau dihantar melalui e-mel pertubuhan atau pos ke alamat pertubuhan.</span></li>
+                    </ul>
+                </div>
+
+                <!-- Dokumen Utama (Sedia & Sah) -->
+                <div class="bg-amber-50 rounded-lg p-4 border border-amber-200">
+                    <h3 class="font-bold text-lg text-gray-900 mb-2 border-l-4 border-amber-500 pl-3">DOKUMEN UTAMA (WAJIB DISEDIAKAN DAN DISAHKAN)</h3>
+                    <ul class="list-none space-y-2 pl-2">
+                        <li class="flex items-start"><i class="fa-solid fa-file-pdf text-red-500 mt-1 mr-3"></i> <span>i. Salinan MyKad pemohon.</span></li>
+                        <li class="flex items-start"><i class="fa-solid fa-file-pdf text-red-500 mt-1 mr-3"></i> <span>ii. Surat sokongan / pengesahan oleh Institusi pengajian mengesahkan kelayakan / keperluan permohonan.</span></li>
+                        <li class="flex items-start"><i class="fa-solid fa-file-pdf text-red-500 mt-1 mr-3"></i> <span>iii. Salinan penyata gaji terkini / surat pengesahan pendapatan ibu bapa / penjaga.</span></li>
+                    </ul>
+                    <div class="mt-4 p-3 bg-white border border-amber-300 rounded text-amber-800 text-xs sm:text-sm font-semibold">
+                        <i class="fa-solid fa-circle-exclamation mr-1"></i> **Pengesahan hendaklah dilakukan oleh Ketua Kampung / Amil Zakat Kariah / Pengerusi Masjid / Pegawai Majlis Agama Islam / ADUN / Ahli Parlimen / Guru Besar.
+                    </div>
+                </div>
+                
+                <div class="pt-6 border-t border-gray-200">
+                    <label class="flex items-start cursor-pointer group">
+                        <input type="checkbox" id="agree-checkbox" class="mt-1 w-5 h-5 text-emerald-600 rounded border-gray-300 focus:ring-emerald-500">
+                        <span class="ml-3 text-gray-700 font-medium group-hover:text-emerald-700 transition">Saya telah membaca, memahami, dan bersetuju dengan segala syarat dan terma yang ditetapkan di atas.</span>
+                    </label>
+                </div>
+            </div>
+            
+            <div class="bg-gray-50 px-6 py-4 border-t flex justify-end">
+                <button id="btn-next-to-form" disabled class="bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-semibold py-2 px-6 rounded-lg shadow transition duration-200 flex items-center">
+                    Teruskan ke Borang <i class="fa-solid fa-arrow-right ml-2"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- VIEW 2: FORM -->
+        <div id="view-form" class="hidden space-y-6">
+            <form id="application-form" onsubmit="event.preventDefault(); return false;">
+                
+                <!-- Bahagian A: Jenis Bantuan -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div class="bg-emerald-50 px-6 py-3 border-b border-emerald-100">
+                        <h2 class="font-bold text-emerald-800">BAHAGIAN A: PILIHAN BANTUAN</h2>
+                    </div>
+                    <div class="p-6">
+                        <p class="text-sm text-gray-600 mb-4">Sila pilih satu (1) jenis bantuan yang diperlukan:</p>
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <label class="relative flex cursor-pointer rounded-lg border bg-white p-4 shadow-sm hover:border-emerald-400 focus-within:ring-2 focus-within:ring-emerald-500">
+                                <input type="radio" name="jenisBantuan" value="Telefon Pintar" class="sr-only peer" required>
+                                <div class="peer-checked:border-emerald-500 peer-checked:ring-emerald-500 absolute inset-0 rounded-lg border-2 border-transparent pointer-events-none"></div>
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 peer-checked:bg-emerald-600 peer-checked:text-white transition">
+                                        <i class="fa-solid fa-mobile-screen-button"></i>
+                                    </div>
+                                    <span class="font-semibold text-gray-700">Telefon Pintar</span>
+                                </div>
+                            </label>
+                            
+                            <label class="relative flex cursor-pointer rounded-lg border bg-white p-4 shadow-sm hover:border-emerald-400 focus-within:ring-2 focus-within:ring-emerald-500">
+                                <input type="radio" name="jenisBantuan" value="Peranti Tablet" class="sr-only peer">
+                                <div class="peer-checked:border-emerald-500 peer-checked:ring-emerald-500 absolute inset-0 rounded-lg border-2 border-transparent pointer-events-none"></div>
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 peer-checked:bg-emerald-600 peer-checked:text-white transition">
+                                        <i class="fa-solid fa-tablet-screen-button"></i>
+                                    </div>
+                                    <span class="font-semibold text-gray-700">Peranti Tablet</span>
+                                </div>
+                            </label>
+
+                            <label class="relative flex cursor-pointer rounded-lg border bg-white p-4 shadow-sm hover:border-emerald-400 focus-within:ring-2 focus-within:ring-emerald-500">
+                                <input type="radio" name="jenisBantuan" value="Komputer Riba" class="sr-only peer">
+                                <div class="peer-checked:border-emerald-500 peer-checked:ring-emerald-500 absolute inset-0 rounded-lg border-2 border-transparent pointer-events-none"></div>
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 peer-checked:bg-emerald-600 peer-checked:text-white transition">
+                                        <i class="fa-solid fa-laptop"></i>
+                                    </div>
+                                    <span class="font-semibold text-gray-700">Komputer Riba</span>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bahagian B: Maklumat Pemohon -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mt-6">
+                    <div class="bg-emerald-50 px-6 py-3 border-b border-emerald-100">
+                        <h2 class="font-bold text-emerald-800">BAHAGIAN B: MAKLUMAT PEMOHON</h2>
+                    </div>
+                    <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="col-span-1 md:col-span-2">
+                            <label class="block text-sm font-semibold text-gray-700 mb-1">Nama Penuh (Seperti dalam MyKad)</label>
+                            <input type="text" id="pemohonNama" class="w-full px-4 py-2 uppercase border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition" required placeholder="Cth: AHMAD BIN ABU">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-1">No. Kad Pengenalan</label>
+                            <input type="text" id="pemohonIC" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition" required placeholder="Cth: 010203-10-1234" maxlength="14">
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-1">Jantina</label>
+                            <select id="pemohonJantina" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition bg-white" required>
+                                <option value="" disabled selected>-- Pilih Jantina --</option>
+                                <option value="LELAKI">LELAKI</option>
+                                <option value="PEREMPUAN">PEREMPUAN</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-1">Jenis Pengajian</label>
+                            <select id="pemohonPengajian" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition bg-white" required>
+                                <option value="" disabled selected>-- Pilih Jenis Pengajian --</option>
+                                <option value="IJAZAH SARJANA MUDA (DEGREE)">IJAZAH SARJANA MUDA (DEGREE)</option>
+                                <option value="DIPLOMA">DIPLOMA</option>
+                                <option value="MATRIKULASI / ASASI">MATRIKULASI / ASASI</option>
+                                <option value="SIJIL">SIJIL</option>
+                                <option value="SEKOLAH MENENGAH">SEKOLAH MENENGAH</option>
+                                <option value="SEKOLAH RENDAH">SEKOLAH RENDAH</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-1">Alamat E-mel</label>
+                            <div class="flex gap-2">
+                                <input type="email" id="pemohonEmail" class="flex-1 min-w-0 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition" required placeholder="Cth: ahmad@gmail.com">
+                                <button type="button" id="btn-otp" class="shrink-0 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3 rounded-lg">Hantar Kod</button>
+                            </div>
+                            <div id="otp-wrap" class="hidden mt-2">
+                                <input type="text" id="pemohonOtp" inputmode="numeric" maxlength="6" class="w-full px-4 py-2 border border-blue-300 rounded-lg tracking-[.4em] font-bold outline-none focus:ring-2 focus:ring-blue-500" placeholder="Kod 6 digit dari e-mel">
+                            </div>
+                            <p id="otp-msg" class="text-xs text-gray-500 mt-1">E-mel mesti aktif. Kod pengesahan akan dihantar ke e-mel ini.</p>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-1">No. Telefon</label>
+                            <input type="tel" id="pemohonTelefon" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition" required placeholder="Cth: 01234567891">
+                        </div>
+
+                        <div class="col-span-1 md:col-span-2">
+                            <label class="block text-sm font-semibold text-gray-700 mb-1">Alamat Rumah</label>
+                            <input type="text" id="pemohonAlamat" class="w-full px-4 py-2 uppercase border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition" required placeholder="Cth: NO 12, KAMPUNG BELANTIK">
+                        </div>
+                        <div class="col-span-1 md:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <div><label class="block text-sm font-semibold text-gray-700 mb-1">Poskod</label><input type="text" id="pemohonPoskod" inputmode="numeric" maxlength="5" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none" required></div>
+                            <div><label class="block text-sm font-semibold text-gray-700 mb-1">Bandar</label><input type="text" id="pemohonBandar" class="w-full px-4 py-2 uppercase border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none" required></div>
+                            <div><label class="block text-sm font-semibold text-gray-700 mb-1">Negeri</label>
+                                <select id="pemohonNegeri" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none bg-white" required>
+                                    <option value="" disabled selected>-- Pilih --</option>
+                                    <option>JOHOR</option><option>KEDAH</option><option>KELANTAN</option><option>MELAKA</option><option>NEGERI SEMBILAN</option><option>PAHANG</option><option>PERAK</option><option>PERLIS</option><option>PULAU PINANG</option><option>SABAH</option><option>SARAWAK</option><option>SELANGOR</option><option>TERENGGANU</option><option>W.P. KUALA LUMPUR</option><option>W.P. LABUAN</option><option>W.P. PUTRAJAYA</option>
+                                </select></div>
+                        </div>
+
+                        <div class="col-span-1 md:col-span-2">
+                            <label class="block text-sm font-semibold text-gray-700 mb-1">Alasan Permohonan</label>
+                            <textarea id="pemohonAlasan" rows="3" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition uppercase" required placeholder="Sila nyatakan alasan munasabah mengapa anda memerlukan bantuan ini..."></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bahagian C: Maklumat Pasangan/Ibu/Bapa/Penjaga -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mt-6">
+                    <div class="bg-emerald-50 px-6 py-3 border-b border-emerald-100">
+                        <h2 class="font-bold text-emerald-800">BAHAGIAN C: MAKLUMAT IBU / BAPA / PENJAGA</h2>
+                    </div>
+                    
+                    <div class="p-6 overflow-x-auto">
+                        <p class="text-sm text-gray-600 mb-4">Sila isikan maklumat penjaga 1 dan penjaga 2. Kosongkan Penjaga 2 jika tidak berkenaan.</p>
+                        
+                        <table class="w-full border-collapse border border-gray-200 min-w-[800px]">
+                            <thead>
+                                <tr class="bg-gray-100">
+                                    <th class="border border-gray-200 px-4 py-2 text-left text-sm font-semibold w-1/4">Perkara</th>
+                                    <th class="border border-gray-200 px-4 py-2 text-left text-sm font-semibold w-3/8">Penjaga 1 (Bapa / Penjaga Utama)</th>
+                                    <th class="border border-gray-200 px-4 py-2 text-left text-sm font-semibold w-3/8">Penjaga 2 (Ibu / Pasangan Penjaga)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td class="border border-gray-200 px-4 py-3 text-sm font-medium bg-gray-50">Nama Penuh</td>
+                                    <td class="border border-gray-200 px-4 py-2">
+                                        <input type="text" id="p1Nama" class="w-full px-2 py-1 uppercase border border-gray-300 rounded focus:ring-emerald-500 focus:border-emerald-500 outline-none" required>
+                                    </td>
+                                    <td class="border border-gray-200 px-4 py-2">
+                                        <input type="text" id="p2Nama" class="w-full px-2 py-1 uppercase border border-gray-300 rounded focus:ring-emerald-500 focus:border-emerald-500 outline-none">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="border border-gray-200 px-4 py-3 text-sm font-medium bg-gray-50">No. Kad Pengenalan</td>
+                                    <td class="border border-gray-200 px-4 py-2">
+                                        <input type="text" id="p1IC" class="w-full px-2 py-1 border border-gray-300 rounded focus:ring-emerald-500 focus:border-emerald-500 outline-none" required>
+                                    </td>
+                                    <td class="border border-gray-200 px-4 py-2">
+                                        <input type="text" id="p2IC" class="w-full px-2 py-1 border border-gray-300 rounded focus:ring-emerald-500 focus:border-emerald-500 outline-none">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="border border-gray-200 px-4 py-3 text-sm font-medium bg-gray-50">Pekerjaan</td>
+                                    <td class="border border-gray-200 px-4 py-2">
+                                        <input type="text" id="p1Pekerjaan" class="w-full px-2 py-1 uppercase border border-gray-300 rounded focus:ring-emerald-500 focus:border-emerald-500 outline-none" required>
+                                    </td>
+                                    <td class="border border-gray-200 px-4 py-2">
+                                        <input type="text" id="p2Pekerjaan" class="w-full px-2 py-1 uppercase border border-gray-300 rounded focus:ring-emerald-500 focus:border-emerald-500 outline-none">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="border border-gray-200 px-4 py-3 text-sm font-medium bg-gray-50">Pendapatan Sebulan (RM)</td>
+                                    <td class="border border-gray-200 px-4 py-2">
+                                        <input type="number" id="p1Pendapatan" min="0" step="0.01" class="w-full px-2 py-1 border border-gray-300 rounded focus:ring-emerald-500 focus:border-emerald-500 outline-none" required>
+                                    </td>
+                                    <td class="border border-gray-200 px-4 py-2">
+                                        <input type="number" id="p2Pendapatan" min="0" step="0.01" class="w-full px-2 py-1 border border-gray-300 rounded focus:ring-emerald-500 focus:border-emerald-500 outline-none">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="border border-gray-200 px-4 py-3 text-sm font-medium bg-gray-50">Bilangan Tanggungan</td>
+                                    <td class="border border-gray-200 px-4 py-2" colspan="2">
+                                        <input type="number" id="jumlahTanggungan" min="0" class="w-full max-w-xs px-2 py-1 border border-gray-300 rounded focus:ring-emerald-500 focus:border-emerald-500 outline-none" placeholder="Jumlah semua tanggungan" required>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Bahagian D: Muat Naik Dokumen -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mt-6">
+                    <div class="bg-emerald-50 px-6 py-3 border-b border-emerald-100">
+                        <h2 class="font-bold text-emerald-800">BAHAGIAN D: LAMPIRAN DOKUMEN</h2>
+                    </div>
+                    <div class="p-6">
+                        <div class="bg-blue-50 text-blue-800 text-sm p-4 rounded-lg mb-6 flex items-start">
+                            <i class="fa-solid fa-circle-info mt-1 mr-3"></i>
+                            <p>Sila muat naik fail dalam format PDF, JPG atau PNG sahaja. Maksimum saiz fail ialah 3MB setiap satu.</p>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <!-- Upload 1 -->
+                            <div class="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-emerald-500 transition relative">
+                                <i class="fa-solid fa-id-card text-3xl text-gray-400 mb-2"></i>
+                                <h3 class="font-semibold text-sm mb-1">Salinan MyKad</h3>
+                                <p class="text-xs text-red-500 mb-3">(Wajib Disahkan)</p>
+                                <input type="file" id="fileMyKad" accept=".pdf,image/png,image/jpeg" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" required onchange="updateFileName(this, 'nameMyKad')">
+                                <div id="nameMyKad" class="text-xs text-emerald-600 font-medium truncate px-2 bg-emerald-50 rounded py-1 hidden"></div>
+                                <button type="button" class="bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs py-1 px-3 rounded pointer-events-none mt-2">Pilih Fail</button>
+                            </div>
+                            
+                            <!-- Upload 2 -->
+                            <div class="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-emerald-500 transition relative">
+                                <i class="fa-solid fa-file-certificate text-3xl text-gray-400 mb-2"></i>
+                                <h3 class="font-semibold text-sm mb-1">Surat Sokongan</h3>
+                                <p class="text-xs text-red-500 mb-3">(Wajib Disahkan)</p>
+                                <input type="file" id="fileSokongan" accept=".pdf,image/png,image/jpeg" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" required onchange="updateFileName(this, 'nameSokongan')">
+                                <div id="nameSokongan" class="text-xs text-emerald-600 font-medium truncate px-2 bg-emerald-50 rounded py-1 hidden"></div>
+                                <button type="button" class="bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs py-1 px-3 rounded pointer-events-none mt-2">Pilih Fail</button>
+                            </div>
+
+                            <!-- Upload 3 -->
+                            <div class="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-emerald-500 transition relative">
+                                <i class="fa-solid fa-file-invoice-dollar text-3xl text-gray-400 mb-2"></i>
+                                <h3 class="font-semibold text-sm mb-1">Penyata Gaji / Pengesahan</h3>
+                                <p class="text-xs text-red-500 mb-3">(Wajib Disahkan)</p>
+                                <input type="file" id="fileGaji" accept=".pdf,image/png,image/jpeg" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" required onchange="updateFileName(this, 'nameGaji')">
+                                <div id="nameGaji" class="text-xs text-emerald-600 font-medium truncate px-2 bg-emerald-50 rounded py-1 hidden"></div>
+                                <button type="button" class="bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs py-1 px-3 rounded pointer-events-none mt-2">Pilih Fail</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bahagian E: Pengakuan & Tandatangan -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mt-6">
+                    <div class="bg-emerald-50 px-6 py-3 border-b border-emerald-100">
+                        <h2 class="font-bold text-emerald-800">BAHAGIAN E: PENGAKUAN PEMOHON</h2>
+                    </div>
+                    <div class="p-6">
+                        <div class="bg-gray-50 border border-gray-200 p-4 rounded-lg mb-6 italic text-gray-700 text-sm text-justify leading-relaxed">
+                            "Saya dengan ini sesungguhnya mengaku bahawa segala maklumat yang diberikan di dalam borang ini dan lampiran yang disertakan adalah benar, lengkap dan tepat. Saya memahami sekiranya didapati maklumat tersebut palsu atau tidak benar, pihak penganjur / pengurusan berhak untuk menolak permohonan ini secara serta-merta tanpa sebarang notis, atau menarik balik bantuan sekiranya telah diluluskan."
+                        </div>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <!-- Tarikh -->
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-1">Tarikh Permohonan</label>
+                                <input type="date" id="tarikhPermohonan" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none" required>
+                            </div>
+
+                            <!-- Signature area -->
+                            <div>
+                                <div class="flex justify-between items-end mb-1">
+                                    <label class="block text-sm font-semibold text-gray-700">Tandatangan Digital</label>
+                                    <button type="button" onclick="signaturePad.clear()" class="text-xs text-red-600 hover:text-red-800 font-medium"><i class="fa-solid fa-eraser"></i> Padam</button>
+                                </div>
+                                
+                                <!-- Canvas for drawing signature -->
+                                <div class="signature-wrapper mb-2">
+                                    <canvas id="signature-pad" class="signature-pad"></canvas>
+                                </div>
+                                <p class="text-xs text-gray-500">*Sila lukis tandatangan anda di dalam kotak di atas menggunakan tetikus atau skrin sentuh.</p>
+                                
+                                <!-- Hidden input to hold signature validation -->
+                                <input type="text" id="signatureDataHidden" class="opacity-0 w-0 h-0" required title="Sila lukis tandatangan anda">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Navigation Buttons -->
+                <div class="flex justify-between items-center mt-8">
+                    <button type="button" id="btn-back-to-req" class="text-gray-600 hover:text-gray-900 font-semibold px-4 py-2 flex items-center transition">
+                        <i class="fa-solid fa-arrow-left mr-2"></i> Kembali
+                    </button>
+                    <button type="button" id="btn-preview-form" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-8 rounded-lg shadow transition duration-200 flex items-center">
+                        Pratonton Borang & Hantar <i class="fa-solid fa-eye ml-2"></i>
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- VIEW 3: PREVIEW & SUBMIT -->
+        <div id="view-preview" class="hidden">
+            <div class="mb-4 flex flex-col sm:flex-row justify-between items-center gap-4 no-print">
+                <button type="button" id="btn-back-to-form" class="text-gray-600 hover:text-gray-900 font-semibold px-4 py-2 flex items-center transition">
+                    <i class="fa-solid fa-pen mr-2"></i> Edit Borang
+                </button>
+                <div class="flex gap-3 w-full sm:w-auto">
+                    <button type="button" id="btn-download-pdf" class="flex-1 sm:flex-none bg-amber-500 hover:bg-amber-600 text-white font-semibold py-2 px-4 rounded-lg shadow transition duration-200 flex items-center justify-center">
+                        <i class="fa-solid fa-file-pdf mr-2"></i> Muat Turun PDF
+                    </button>
+                    <button type="button" id="btn-final-submit" class="flex-1 sm:flex-none bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg shadow transition duration-200 flex items-center justify-center">
+                        <i class="fa-solid fa-paper-plane mr-2"></i> Hantar Ke Pelayan
+                    </button>
+                </div>
+            </div>
+
+            <!-- The A4 Sheet for preview & PDF generation -->
+            <div id="pdf-content" class="a4-preview text-sm">
+                <!-- Header -->
+                <div class="text-center border-b-2 border-black pb-4 mb-4">
+                    <img src="https://i.postimg.cc/7LryVYZ0/image.png" alt="Logo" crossorigin="anonymous" class="h-20 w-auto mx-auto mb-3 object-contain">
+                    <h1 class="font-bold text-xl uppercase">Borang Permohonan Kebajikan (Untukmu Siswa)</h1>
+                    <p class="text-gray-700 text-xs mt-1">No. Rujukan: <span id="prev-date-time" class="font-bold"></span></p>
+                </div>
+
+                <!-- Section A -->
+                <div class="mb-4">
+                    <div class="bg-gray-200 p-1 mb-2 border border-black font-bold uppercase text-xs">Bahagian A: Pilihan Bantuan</div>
+                    <table class="w-full border-collapse border border-black">
+                        <tr>
+                            <td class="border border-black p-2 font-bold w-1/3">Jenis Bantuan Dimohon</td>
+                            <td class="border border-black p-2" id="prev-jenis"></td>
+                        </tr>
+                    </table>
+                </div>
+
+                <!-- Section B -->
+                <div class="mb-4">
+                    <div class="bg-gray-200 p-1 mb-2 border border-black font-bold uppercase text-xs">Bahagian B: Maklumat Pemohon</div>
+                    <table class="w-full border-collapse border border-black">
+                        <tr>
+                            <td class="border border-black p-2 font-bold w-1/3">Nama Penuh</td>
+                            <td class="border border-black p-2 uppercase" id="prev-nama"></td>
+                        </tr>
+                        <tr>
+                            <td class="border border-black p-2 font-bold">No. Kad Pengenalan</td>
+                            <td class="border border-black p-2 uppercase" id="prev-ic"></td>
+                        </tr>
+                        <tr>
+                            <td class="border border-black p-2 font-bold">Jantina</td>
+                            <td class="border border-black p-2 uppercase" id="prev-jantina"></td>
+                        </tr>
+                        <tr>
+                            <td class="border border-black p-2 font-bold">Jenis Pengajian</td>
+                            <td class="border border-black p-2 uppercase" id="prev-pengajian"></td>
+                        </tr>
+                        <tr>
+                            <td class="border border-black p-2 font-bold">Alamat E-mel</td>
+                            <td class="border border-black p-2" id="prev-email"></td>
+                        </tr>
+                        <tr>
+                            <td class="border border-black p-2 font-bold">No. Telefon</td>
+                            <td class="border border-black p-2" id="prev-telefon"></td>
+                        </tr>
+                        <tr>
+                            <td class="border border-black p-2 font-bold">Alamat</td>
+                            <td class="border border-black p-2 uppercase" id="prev-alamat"></td>
+                        </tr>
+                        <tr>
+                            <td class="border border-black p-2 font-bold align-top">Alasan Permohonan</td>
+                            <td class="border border-black p-2 uppercase h-20 align-top" id="prev-alasan"></td>
+                        </tr>
+                    </table>
+                </div>
+
+                <!-- Section C -->
+                <div class="mb-4">
+                    <div class="bg-gray-200 p-1 mb-2 border border-black font-bold uppercase text-xs">Bahagian C: Maklumat Ibu / Bapa / Penjaga</div>
+                    <table class="w-full border-collapse border border-black text-xs">
+                        <tr class="bg-gray-100">
+                            <th class="border border-black p-2 text-left w-1/4">Perkara</th>
+                            <th class="border border-black p-2 text-left">Penjaga 1</th>
+                            <th class="border border-black p-2 text-left">Penjaga 2</th>
+                        </tr>
+                        <tr>
+                            <td class="border border-black p-2 font-bold">Nama</td>
+                            <td class="border border-black p-2 uppercase" id="prev-p1-nama"></td>
+                            <td class="border border-black p-2 uppercase" id="prev-p2-nama"></td>
+                        </tr>
+                        <tr>
+                            <td class="border border-black p-2 font-bold">No. K/P</td>
+                            <td class="border border-black p-2" id="prev-p1-ic"></td>
+                            <td class="border border-black p-2" id="prev-p2-ic"></td>
+                        </tr>
+                        <tr>
+                            <td class="border border-black p-2 font-bold">Pekerjaan</td>
+                            <td class="border border-black p-2 uppercase" id="prev-p1-kerja"></td>
+                            <td class="border border-black p-2 uppercase" id="prev-p2-kerja"></td>
+                        </tr>
+                        <tr>
+                            <td class="border border-black p-2 font-bold">Pendapatan (RM)</td>
+                            <td class="border border-black p-2" id="prev-p1-gaji"></td>
+                            <td class="border border-black p-2" id="prev-p2-gaji"></td>
+                        </tr>
+                    </table>
+                    <div class="mt-2 text-xs font-bold">
+                        Jumlah Tanggungan: <span id="prev-tanggungan" class="font-normal border-b border-black inline-block w-16 text-center"></span> orang
+                    </div>
+                </div>
+
+                <!-- Section D Lampiran -->
+                <div class="mb-4">
+                    <div class="bg-gray-200 p-1 mb-2 border border-black font-bold uppercase text-xs">Bahagian D: Lampiran Dokumen (Tandakan √)</div>
+                    <div class="grid grid-cols-3 gap-2 text-xs">
+                        <div class="flex items-center"><div class="w-4 h-4 border border-black flex items-center justify-center mr-2">√</div> Salinan MyKad (<span id="prev-file-mykad" class="italic text-[10px] truncate max-w-[100px] ml-1"></span>)</div>
+                        <div class="flex items-center"><div class="w-4 h-4 border border-black flex items-center justify-center mr-2">√</div> Surat Sokongan (<span id="prev-file-sok" class="italic text-[10px] truncate max-w-[100px] ml-1"></span>)</div>
+                        <div class="flex items-center"><div class="w-4 h-4 border border-black flex items-center justify-center mr-2">√</div> Penyata Gaji (<span id="prev-file-gaji" class="italic text-[10px] truncate max-w-[100px] ml-1"></span>)</div>
+                    </div>
+                </div>
+
+                <!-- Section E -->
+                <div class="mt-6">
+                    <div class="bg-gray-200 p-1 mb-2 border border-black font-bold uppercase text-xs">Bahagian E: Pengakuan Pemohon</div>
+                    <p class="text-xs text-justify mb-8 italic">
+                        "Saya dengan ini sesungguhnya mengaku bahawa segala maklumat yang diberikan di dalam borang ini dan lampiran yang disertakan adalah benar, lengkap dan tepat. Saya memahami sekiranya didapati maklumat tersebut palsu atau tidak benar, pihak penganjur berhak untuk menolak permohonan ini secara serta-merta tanpa sebarang notis."
+                    </p>
+                    
+                    <div class="grid grid-cols-2 gap-8 text-sm">
+                        <div class="flex flex-col justify-end">
+                            <div class="border-b border-black w-3/4 mb-1 h-6" id="prev-tarikh"></div>
+                            <div class="font-bold">Tarikh</div>
+                        </div>
+                        <div class="flex flex-col justify-end items-end">
+                            <div class="border-b border-black w-3/4 mb-1 min-h-[60px] flex items-end justify-center">
+                                <img id="prev-signature-img" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="Tandatangan" class="max-h-[60px] max-w-full">
+                            </div>
+                            <div class="font-bold text-center w-3/4">Tandatangan Pemohon</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mt-10 pt-4 border-t border-dashed border-gray-400 text-center text-[10px] text-gray-500">
+                    Borang janaan komputer. Tidak memerlukan tandatangan rasmi pengesahan penerimaan.
+                </div>
+                
+                <!-- Appendices Container (For uploaded files) -->
+                <div id="appendices-container"></div>
+            </div>
+        </div>
+
+        <!-- VIEW 4: SUCCESS -->
+        <div id="view-success" class="hidden">
+            <div class="bg-white rounded-xl shadow-lg border border-gray-100 p-10 text-center max-w-lg mx-auto">
+                <div class="w-24 h-24 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-6 text-emerald-600">
+                    <i class="fa-solid fa-check-circle text-5xl"></i>
+                </div>
+                <h2 class="text-2xl font-bold text-gray-900 mb-2">Permohonan Berjaya Dihantar!</h2>
+                <p class="text-gray-600 mb-6">Terima kasih. Permohonan dan fail lampiran anda telah selamat dimuat naik ke dalam sistem. <br><span class="text-emerald-700 font-medium">Satu e-mel pengesahan telah dihantar ke alamat e-mel anda.</span></p>
+                
+                <div class="bg-gray-50 border border-gray-200 rounded-lg p-6 mb-8">
+                    <p class="text-sm font-medium text-gray-500 mb-1">Nombor Rujukan & Folder Anda:</p>
+                    <div class="text-xl md:text-2xl font-bold text-emerald-700 tracking-wider break-all" id="ref-number">-</div>
+                    <button onclick="copyRef()" class="mt-3 text-sm text-blue-600 hover:text-blue-800 font-medium">
+                        <i class="fa-regular fa-copy"></i> Salin No. Rujukan
+                    </button>
+                </div>
+                
+                <div class="space-y-3">
+                    <button id="btn-success-download" class="w-full bg-amber-500 hover:bg-amber-600 text-white font-semibold py-3 px-4 rounded-lg shadow transition duration-200">
+                        <i class="fa-solid fa-file-pdf mr-2"></i> Muat Turun Salinan Borang (PDF)
+                    </button>
+                    <button onclick="location.reload()" class="w-full bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold py-3 px-4 rounded-lg transition duration-200">
+                        Kembali ke Halaman Utama
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Processing Modal / Loader overlay -->
+        <div id="loader-overlay" class="fixed inset-0 bg-white bg-opacity-90 z-50 flex flex-col items-center justify-center hidden">
+            <div class="mcm-spin mb-4"><img src="https://i.postimg.cc/7LryVYZ0/image.png" crossorigin="anonymous" alt=""></div>
+            <p class="text-emerald-700 font-medium animate-pulse text-center px-4" id="loader-text">Memproses permohonan anda...</p>
+        </div>
+
+    </main>
+
+    <script>
+        // DOM Elements
+        const viewReq = document.getElementById('view-requirements');
+        const viewForm = document.getElementById('view-form');
+        const viewPreview = document.getElementById('view-preview');
+        const viewSuccess = document.getElementById('view-success');
+        
+        const btnNextToForm = document.getElementById('btn-next-to-form');
+        const agreeCheckbox = document.getElementById('agree-checkbox');
+        const btnBackToReq = document.getElementById('btn-back-to-req');
+        const btnPreviewForm = document.getElementById('btn-preview-form');
+        const btnBackToForm = document.getElementById('btn-back-to-form');
+        const btnDownloadPdf = document.getElementById('btn-download-pdf');
+        const btnFinalSubmit = document.getElementById('btn-final-submit');
+        const btnSuccessDownload = document.getElementById('btn-success-download');
+        
+        const form = document.getElementById('application-form');
+        const loader = document.getElementById('loader-overlay');
+        const signatureHidden = document.getElementById('signatureDataHidden');
+
+        // 🛑 SILA MASUKKAN WEB APP URL ANDA DI SINI (Dipindahkan ke atas untuk kegunaan Umum & Carian Status)
+        const scriptURL = 'https://script.google.com/macros/s/AKfycbzjZRBiOeFxkc47QYwhCpaxoKg_p-NH0oCrx6AzXmBks6AIntxDeVJTBX0BqR7rbQlq7w/exec'; 
+
+        const KOD_BORANG = '2.13'; // PERMOHONAN KEBAJIKAN (UNTUKMU SISWA)
+
+        // Signature Pad Init
+        let signaturePad;
+        let otpSentTo = '';
+
+        // ==========================================
+        // OTP PENGESAHAN E-MEL
+        // ==========================================
+        document.getElementById('btn-otp').addEventListener('click', async () => {
+            const emailEl = document.getElementById('pemohonEmail');
+            const msg = document.getElementById('otp-msg');
+            const btn = document.getElementById('btn-otp');
+            const email = emailEl.value.trim().toLowerCase();
+            if (!emailEl.checkValidity() || !email) { emailEl.reportValidity(); return; }
+            btn.disabled = true; btn.textContent = 'Menghantar...';
+            try {
+                const r = await (await fetch(scriptURL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: 'requestOtp', email }) })).json();
+                if (r.status !== 'success') throw new Error(r.message);
+                otpSentTo = email;
+                document.getElementById('otp-wrap').classList.remove('hidden');
+                msg.className = 'text-xs text-emerald-700 mt-1 font-medium';
+                msg.textContent = 'Kod telah dihantar ke ' + email + '. Semak Inbox/Spam. Kod sah 10 minit.';
+                let t = 60;
+                const iv = setInterval(() => { btn.textContent = 'Hantar semula (' + t + ')'; if (--t < 0) { clearInterval(iv); btn.disabled = false; btn.textContent = 'Hantar Semula'; } }, 1000);
+            } catch (err) {
+                msg.className = 'text-xs text-red-600 mt-1 font-medium';
+                msg.textContent = err.message;
+                btn.disabled = false; btn.textContent = 'Hantar Kod';
+            }
+        });
+        document.getElementById('pemohonEmail').addEventListener('input', (e) => {
+            if (otpSentTo && e.target.value.trim().toLowerCase() !== otpSentTo) {
+                document.getElementById('otp-wrap').classList.add('hidden');
+                document.getElementById('pemohonOtp').value = '';
+                document.getElementById('otp-msg').className = 'text-xs text-amber-700 mt-1';
+                document.getElementById('otp-msg').textContent = 'E-mel ditukar. Sila minta kod baru.';
+            }
+        });
+
+        // Setup PDF.js worker
+        if (window.pdfjsLib) {
+            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+        }
+
+        document.addEventListener("DOMContentLoaded", function() {
+            // Setup Signature Pad
+            const canvas = document.getElementById('signature-pad');
+            function resizeCanvas() {
+                const ratio =  Math.max(window.devicePixelRatio || 1, 1);
+                canvas.width = canvas.offsetWidth * ratio;
+                canvas.height = canvas.offsetHeight * ratio;
+                canvas.getContext("2d").scale(ratio, ratio);
+                if(signaturePad) signaturePad.clear(); 
+            }
+            window.addEventListener("resize", resizeCanvas);
+            resizeCanvas();
+
+            signaturePad = new SignaturePad(canvas, {
+                penColor: "rgb(0, 0, 0)",
+                backgroundColor: "rgba(255, 255, 255, 0)" 
+            });
+
+            signaturePad.addEventListener("endStroke", () => {
+                signatureHidden.value = "signed";
+            });
+            
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('tarikhPermohonan').value = today;
+
+            // FUNGSI AUTO-FORMAT KAD PENGENALAN (SENGKANG AUTOMATIK XXXXXX-XX-XXXX)
+            const icInputs = [document.getElementById('pemohonIC'), document.getElementById('p1IC'), document.getElementById('p2IC')];
+            icInputs.forEach(input => {
+                if (input) {
+                    input.addEventListener('input', function(e) {
+                        let val = e.target.value.replace(/\D/g, ''); // Buang semua huruf/simbol
+                        if (val.length > 6 && val.length <= 8) {
+                            val = val.substring(0, 6) + '-' + val.substring(6);
+                        } else if (val.length > 8) {
+                            val = val.substring(0, 6) + '-' + val.substring(6, 8) + '-' + val.substring(8, 12);
+                        }
+                        e.target.value = val;
+                    });
+                }
+            });
+        });
+
+        // Step 1: Requirements Checkbox
+        agreeCheckbox.addEventListener('change', function() {
+            btnNextToForm.disabled = !this.checked;
+        });
+
+        // Navigation Actions
+        btnNextToForm.addEventListener('click', () => {
+            switchView(viewReq, viewForm, 2);
+            window.dispatchEvent(new Event('resize')); 
+        });
+        
+        btnBackToReq.addEventListener('click', () => {
+            switchView(viewForm, viewReq, 1);
+        });
+
+        btnBackToForm.addEventListener('click', () => {
+            switchView(viewPreview, viewForm, 2);
+        });
+
+        // Validate Form and Go to Preview
+        btnPreviewForm.addEventListener('click', async () => {
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+            
+            if (signaturePad.isEmpty()) {
+                alert("Sila turunkan tandatangan anda pada ruangan yang disediakan.");
+                return;
+            }
+
+            // Semakan No. K/P (12 digit)
+            const icPemohon = document.getElementById('pemohonIC').value.replace(/\D/g, '');
+            if (icPemohon.length !== 12) { alert("No. Kad Pengenalan pemohon mesti 12 digit."); return; }
+            for (const id of ['p1IC', 'p2IC']) {
+                const v = document.getElementById(id).value.replace(/\D/g, '');
+                if (v && v.length !== 12) { alert("No. Kad Pengenalan penjaga mesti 12 digit."); return; }
+            }
+            if (!/^\d{5}$/.test(document.getElementById('pemohonPoskod').value.trim())) { alert("Poskod mesti 5 digit."); return; }
+
+            // Semakan OTP e-mel
+            const emailNow = document.getElementById('pemohonEmail').value.trim().toLowerCase();
+            if (!otpSentTo || otpSentTo !== emailNow) { alert("Sila tekan 'Hantar Kod' untuk mengesahkan e-mel anda."); return; }
+            if (!/^\d{6}$/.test(document.getElementById('pemohonOtp').value.trim())) { alert("Sila masukkan kod pengesahan 6 digit yang dihantar ke e-mel anda."); document.getElementById('pemohonOtp').focus(); return; }
+
+            // Custom validation for file size (max 3MB each)
+            const MAX_SIZE = 3 * 1024 * 1024;
+            const files = [
+                document.getElementById('fileMyKad').files[0],
+                document.getElementById('fileSokongan').files[0],
+                document.getElementById('fileGaji').files[0]
+            ];
+            for (let file of files) {
+                if (file && file.size > MAX_SIZE) {
+                    alert(`Ralat: Saiz fail "${file.name}" terlalu besar. Sila pastikan ia di bawah 3MB.`);
+                    return;
+                }
+            }
+
+            document.getElementById('loader-text').textContent = "Menyediakan Pratonton Dokumen Lampiran...";
+            loader.classList.remove('hidden');
+
+            try {
+                await populatePreviewData();
+                switchView(viewForm, viewPreview, 3);
+            } catch (error) {
+                console.error("Error generating preview:", error);
+                alert("Ralat semasa memproses dokumen. Sila cuba lagi.");
+            } finally {
+                loader.classList.add('hidden');
+            }
+        });
+
+        // Helper to update file names in UI
+        window.updateFileName = function(input, targetId) {
+            const display = document.getElementById(targetId);
+            if(input.files && input.files[0]) {
+                display.textContent = input.files[0].name;
+                display.classList.remove('hidden');
+                input.nextElementSibling.nextElementSibling.textContent = "Tukar Fail"; 
+            } else {
+                display.classList.add('hidden');
+                display.textContent = "";
+                input.nextElementSibling.nextElementSibling.textContent = "Pilih Fail";
+            }
+        }
+
+        // View Switcher logic
+        function switchView(hideView, showView, stepIndicator) {
+            hideView.classList.add('hidden');
+            showView.classList.remove('hidden');
+            window.scrollTo(0, 0);
+            updateStepper(stepIndicator);
+        }
+
+        function updateStepper(step) {
+            for(let i=1; i<=4; i++) {
+                const el = document.getElementById(`step-${i}-indicator`);
+                if(el) {
+                    if(i === step) {
+                        el.classList.remove('step-inactive');
+                        el.classList.add('step-active');
+                        el.querySelector('div').classList.remove('bg-white');
+                        el.querySelector('div').classList.add('bg-emerald-600', 'text-white', 'border-emerald-600');
+                    } else if (i < step) {
+                        el.classList.remove('step-inactive', 'step-active');
+                        el.classList.add('text-emerald-600'); // Completed color
+                        el.querySelector('div').classList.remove('bg-emerald-600', 'text-white', 'border-emerald-600');
+                        el.querySelector('div').classList.add('bg-emerald-100', 'text-emerald-600', 'border-emerald-100');
+                        el.querySelector('div').innerHTML = '<i class="fa-solid fa-check"></i>';
+                    } else {
+                        el.classList.add('step-inactive');
+                        el.classList.remove('step-active', 'text-emerald-600');
+                        el.querySelector('div').classList.add('bg-white');
+                        el.querySelector('div').classList.remove('bg-emerald-600', 'bg-emerald-100', 'text-white', 'border-emerald-600', 'border-emerald-100');
+                        el.querySelector('div').innerHTML = i;
+                    }
+                }
+            }
+        }
+
+        // Map data from form to preview template
+        async function populatePreviewData() {
+            // Generate Reference Number on the fly based on Name & IC
+            const rawName = document.getElementById('pemohonNama').value.trim();
+            const firstName = rawName.split(' ')[0].replace(/[^a-zA-Z]/g, '').toUpperCase(); // Only letters for cleanliness
+            const rawIC = document.getElementById('pemohonIC').value.trim();
+            const cleanIC = rawIC.replace(/[^0-9]/g, ''); // Numbers only
+            
+            document.getElementById('prev-date-time').textContent = '(Akan diberikan selepas borang dihantar)';
+            document.getElementById('prev-alamat').textContent = getAlamatPenuh();
+
+            // A
+            const jenis = document.querySelector('input[name="jenisBantuan"]:checked')?.value || "-";
+            document.getElementById('prev-jenis').textContent = jenis;
+
+            // B
+            document.getElementById('prev-nama').textContent = document.getElementById('pemohonNama').value;
+            document.getElementById('prev-ic').textContent = document.getElementById('pemohonIC').value;
+            document.getElementById('prev-jantina').textContent = document.getElementById('pemohonJantina').value;
+            document.getElementById('prev-pengajian').textContent = document.getElementById('pemohonPengajian').value;
+            document.getElementById('prev-email').textContent = document.getElementById('pemohonEmail').value;
+            document.getElementById('prev-telefon').textContent = document.getElementById('pemohonTelefon').value;
+            document.getElementById('prev-alasan').textContent = document.getElementById('pemohonAlasan').value;
+
+            // C
+            document.getElementById('prev-p1-nama').textContent = document.getElementById('p1Nama').value || "-";
+            document.getElementById('prev-p1-ic').textContent = document.getElementById('p1IC').value || "-";
+            document.getElementById('prev-p1-kerja').textContent = document.getElementById('p1Pekerjaan').value || "-";
+            document.getElementById('prev-p1-gaji').textContent = document.getElementById('p1Pendapatan').value || "-";
+
+            document.getElementById('prev-p2-nama').textContent = document.getElementById('p2Nama').value || "-";
+            document.getElementById('prev-p2-ic').textContent = document.getElementById('p2IC').value || "-";
+            document.getElementById('prev-p2-kerja').textContent = document.getElementById('p2Pekerjaan').value || "-";
+            document.getElementById('prev-p2-gaji').textContent = document.getElementById('p2Pendapatan').value || "-";
+            
+            document.getElementById('prev-tanggungan').textContent = document.getElementById('jumlahTanggungan').value;
+
+            // D (Files)
+            const f1 = document.getElementById('fileMyKad').files[0];
+            const f2 = document.getElementById('fileSokongan').files[0];
+            const f3 = document.getElementById('fileGaji').files[0];
+            document.getElementById('prev-file-mykad').textContent = f1 ? f1.name : "Tiada File";
+            document.getElementById('prev-file-sok').textContent = f2 ? f2.name : "Tiada File";
+            document.getElementById('prev-file-gaji').textContent = f3 ? f3.name : "Tiada File";
+
+            // E (Sig & Date)
+            const d = new Date(document.getElementById('tarikhPermohonan').value);
+            const formattedDate = `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+            document.getElementById('prev-tarikh').textContent = formattedDate;
+
+            // Signature Base64
+            const dataURL = signaturePad.toDataURL("image/png");
+            document.getElementById('prev-signature-img').src = dataURL;
+
+            // Render Lampiran (Appendices) dynamically onto PDF
+            const appendicesContainer = document.getElementById('appendices-container');
+            appendicesContainer.innerHTML = ''; 
+            
+            if (f1) await renderAppendixFile(f1, 'SALINAN MYKAD', appendicesContainer);
+            if (f2) await renderAppendixFile(f2, 'SURAT SOKONGAN / PENGESAHAN', appendicesContainer);
+            if (f3) await renderAppendixFile(f3, 'PENYATA GAJI / PENGESAHAN PENDAPATAN', appendicesContainer);
+        }
+
+        function getAlamatPenuh() {
+            return [document.getElementById('pemohonAlamat').value, document.getElementById('pemohonPoskod').value + ' ' + document.getElementById('pemohonBandar').value, document.getElementById('pemohonNegeri').value].map(x => String(x || '').trim()).filter(Boolean).join(', ').toUpperCase();
+        }
+
+        async function renderAppendixFile(file, title, container) {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'html2pdf__page-break mt-8 pt-4'; 
+            wrapper.style.pageBreakBefore = 'always';
+            
+            const header = document.createElement('div');
+            header.className = 'bg-gray-200 p-2 mb-4 border border-black font-bold uppercase text-sm text-center';
+            header.textContent = `LAMPIRAN: ${title}`;
+            wrapper.appendChild(header);
+
+            if (file.type.startsWith('image/')) {
+                const img = await readImageFileAsDataURL(file);
+                img.className = 'max-w-full h-auto mx-auto border border-gray-300 shadow-sm';
+                wrapper.appendChild(img);
+                container.appendChild(wrapper);
+            } else if (file.type === 'application/pdf') {
+                try {
+                    const arrayBuffer = await file.arrayBuffer();
+                    const pdf = await pdfjsLib.getDocument({data: new Uint8Array(arrayBuffer)}).promise;
+                    
+                    for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+                        const page = await pdf.getPage(pageNum);
+                        const viewport = page.getViewport({scale: 1.5});
+                        
+                        const canvas = document.createElement('canvas');
+                        const context = canvas.getContext('2d');
+                        canvas.height = viewport.height;
+                        canvas.width = viewport.width;
+                        
+                        await page.render({canvasContext: context, viewport: viewport}).promise;
+                        
+                        const img = document.createElement('img');
+                        img.src = canvas.toDataURL('image/jpeg', 0.9);
+                        img.className = 'max-w-full h-auto mx-auto border border-gray-300 shadow-sm mb-6';
+                        
+                        if (pageNum > 1) {
+                            const pageWrapper = document.createElement('div');
+                            pageWrapper.className = 'html2pdf__page-break pt-4';
+                            pageWrapper.style.pageBreakBefore = 'always';
+                            pageWrapper.appendChild(img);
+                            wrapper.appendChild(pageWrapper);
+                        } else {
+                            wrapper.appendChild(img);
+                        }
+                    }
+                    container.appendChild(wrapper);
+                } catch (err) {
+                    console.error("Ralat memaparkan PDF:", err);
+                    const errorMsg = document.createElement('p');
+                    errorMsg.className = 'text-red-500 italic text-center py-10 border border-red-300 bg-red-50';
+                    errorMsg.textContent = `[ Gagal memaparkan pratonton automatik untuk fail PDF: ${file.name}. Walau bagaimanapun, fail anda telah selamat dimuat naik. ]`;
+                    wrapper.appendChild(errorMsg);
+                    container.appendChild(wrapper);
+                }
+            }
+        }
+
+        function readImageFileAsDataURL(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = document.createElement('img');
+                    img.src = e.target.result;
+                    resolve(img);
+                };
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+
+        // Helper function to read file strictly to Base64 String (for sending raw files to Apps Script)
+        const getBase64 = (file) => new Promise((resolve, reject) => {
+            if (!file) return resolve(null);
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => resolve({
+                name: file.name,
+                mimeType: file.type,
+                data: reader.result.split(',')[1] // extract purely the base64 part
+            });
+            reader.onerror = error => reject(error);
+        });
+
+        // PDF Generation function using html2pdf
+        function generatePDF(isDownloadOnly = false) {
+            const element = document.getElementById('pdf-content');
+            
+            const rawIC = document.getElementById('pemohonIC').value.replace(/[^0-9]/g, '');
+            const opt = {
+                margin:       10, // mm
+                filename:     `Borang_MCM_${rawIC}.pdf`,
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2, useCORS: true },
+                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+
+            if(isDownloadOnly) {
+                html2pdf().set(opt).from(element).save();
+            } else {
+                return html2pdf().set(opt).from(element).output('datauristring'); 
+            }
+        }
+
+        btnDownloadPdf.addEventListener('click', () => { generatePDF(true); });
+        btnSuccessDownload.addEventListener('click', () => { generatePDF(true); });
+
+        // ==========================================
+        // MAIN SUBMISSION KE GOOGLE APPS SCRIPT
+        // ==========================================
+        btnFinalSubmit.addEventListener('click', async () => {
+            
+            if (scriptURL === 'YOUR_WEB_APP_URL_HERE') {
+                alert("PERHATIAN!\n\nAnda perlu menggantikan 'YOUR_WEB_APP_URL_HERE' dengan URL Google Apps Script sebenar anda dalam fail html sebelum mencuba fungsi hantar.");
+                return;
+            }
+
+            document.getElementById('loader-text').innerHTML = "Menjana PDF & Memuat naik fail ke pelayan... <br><span class='text-sm font-normal text-emerald-600 mt-2 inline-block'>(Sila tunggu, proses ini mungkin mengambil masa beberapa saat)</span>";
+            loader.classList.remove('hidden');
+
+            try {
+                const fMyKad = document.getElementById('fileMyKad').files[0];
+                const fSokongan = document.getElementById('fileSokongan').files[0];
+                const fGaji = document.getElementById('fileGaji').files[0];
+                const attachmentsArray = [];
+                for (const [f, label] of [[fMyKad, 'Salinan MyKad'], [fSokongan, 'Surat Sokongan'], [fGaji, 'Penyata Gaji']]) {
+                    if (f) { const b64 = await getBase64(f); b64.label = label; attachmentsArray.push(b64); }
+                }
+
+                // 1. Hantar data + lampiran. Pelayan beri No. Rujukan berjalan (MCMS/2.13/YYYY/N)
+                const payload = {
+                    action: 'submitPermohonan',
+                    kodBorang: KOD_BORANG,
+                    otp: document.getElementById('pemohonOtp').value.trim(),
+                    email: document.getElementById('pemohonEmail').value.trim(),
+                    nama: document.getElementById('pemohonNama').value,
+                    ic: document.getElementById('pemohonIC').value,
+                    telefon: document.getElementById('pemohonTelefon').value,
+                    alamat: getAlamatPenuh(),
+                    jenisBantuan: document.querySelector('input[name="jenisBantuan"]:checked')?.value || "-",
+                    tarikh: document.getElementById('tarikhPermohonan').value,
+                    attachments: attachmentsArray,
+                    butiran: {
+                        jantina: document.getElementById('pemohonJantina').value,
+                        pengajian: document.getElementById('pemohonPengajian').value,
+                        alasan: document.getElementById('pemohonAlasan').value.toUpperCase(),
+                        p1Nama: document.getElementById('p1Nama').value.toUpperCase(),
+                        p1IC: document.getElementById('p1IC').value,
+                        p1Kerja: document.getElementById('p1Pekerjaan').value.toUpperCase(),
+                        p1Gaji: document.getElementById('p1Pendapatan').value,
+                        p2Nama: document.getElementById('p2Nama').value.toUpperCase(),
+                        p2IC: document.getElementById('p2IC').value,
+                        p2Kerja: document.getElementById('p2Pekerjaan').value.toUpperCase(),
+                        p2Gaji: document.getElementById('p2Pendapatan').value,
+                        tanggungan: document.getElementById('jumlahTanggungan').value
+                    }
+                };
+                const response = await fetch(scriptURL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(payload) });
+                const result = await response.json();
+                if (result.status !== 'success') throw new Error(result.message);
+                const refNo = result.refNo;
+
+                // 2. Masukkan No. Rujukan ke dalam PDF, jana dan muat naik (jika gagal, permohonan tetap diterima)
+                document.getElementById('prev-date-time').textContent = refNo;
+                document.getElementById('ref-number').textContent = refNo;
+                document.getElementById('loader-text').innerHTML = "Permohonan diterima (" + refNo + ").<br><span class='text-sm font-normal'>Menjana salinan PDF...</span>";
+                try {
+                    const pdfBase64 = await generatePDF(false);
+                    await fetch(scriptURL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: 'uploadPdfPermohonan', refNo, uploadToken: result.uploadToken, pdfBase64 }) });
+                } catch (pdfErr) { console.warn('Muat naik PDF gagal:', pdfErr); }
+
+                loader.classList.add('hidden');
+                switchView(viewPreview, viewSuccess, 4);
+
+            } catch (error) {
+                console.error("Ralat Penghantaran:", error);
+                loader.classList.add('hidden');
+                alert("Berlaku ralat semasa menghantar borang.\n\nRalat: " + error.message);
+            }
+        });
+
+        // Copy Reference Number
+        window.copyRef = function() {
+            const refText = document.getElementById('ref-number').textContent;
+            try {
+                const tempInput = document.createElement("input");
+                tempInput.value = refText;
+                document.body.appendChild(tempInput);
+                tempInput.select();
+                document.execCommand("copy");
+                document.body.removeChild(tempInput);
+                
+                const btn = event.currentTarget;
+                const originalHtml = btn.innerHTML;
+                btn.innerHTML = `<i class="fa-solid fa-check text-emerald-600"></i> Disalin!`;
+                btn.classList.add('text-emerald-600');
+                
+                setTimeout(() => {
+                    btn.innerHTML = originalHtml;
+                    btn.classList.remove('text-emerald-600');
+                }, 2000);
+            } catch (err) {
+                console.error('Failed to copy', err);
+            }
+        }
+
+    </script>
+</body>
+</html>
